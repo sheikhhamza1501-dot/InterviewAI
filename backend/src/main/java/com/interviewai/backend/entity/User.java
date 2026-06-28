@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
+import jakarta.persistence.OneToMany;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -29,5 +31,16 @@ public class User {
     private Role role;
 
     private LocalDateTime createdAt;
+
+    @OneToMany(mappedBy = "user")
+    private List<Interview> interviews;
+
+    public List<Interview> getInterviews() {
+        return interviews;
+    }
+
+    public void setInterviews(List<Interview> interviews) {
+        this.interviews = interviews;
+    }
 
 }

@@ -9,11 +9,18 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.ArrayList;
 import com.interviewai.backend.dto.UpdateInterviewRequest;
-
+import com.interviewai.backend.entity.User;
+import com.interviewai.backend.repository.UserRepository;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import com.interviewai.backend.entity.User;
 import java.time.LocalDateTime;
 
 @Service
 public class InterviewService {
+
+    @Autowired
+    private UserRepository userRepository;
 
     @Autowired
     private InterviewRepository interviewRepository;
@@ -25,6 +32,15 @@ public class InterviewService {
         interview.setJobRole(request.getJobRole());
         interview.setExperienceLevel(request.getExperienceLevel());
         interview.setCreatedAt(LocalDateTime.now());
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        String email = authentication.getName();
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        interview.setUser(user);
 
         interview = interviewRepository.save(interview);
 
@@ -39,7 +55,14 @@ public class InterviewService {
     }
     public List<InterviewResponse> getAllInterviews() {
 
-        List<Interview> interviews = interviewRepository.findAll();
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        String email = authentication.getName();
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        List<Interview> interviews = interviewRepository.findByUser(user);
 
         List<InterviewResponse> responseList = new ArrayList<>();
 

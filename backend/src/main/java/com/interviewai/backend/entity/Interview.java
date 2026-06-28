@@ -2,6 +2,8 @@ package com.interviewai.backend.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.JoinColumn;
 
 @Entity
 @Table(name = "interviews")
@@ -15,6 +17,10 @@ public class Interview {
     private String experienceLevel;
 
     private LocalDateTime createdAt;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
 
     public Interview() {
     }
@@ -45,5 +51,12 @@ public class Interview {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
     }
 }
