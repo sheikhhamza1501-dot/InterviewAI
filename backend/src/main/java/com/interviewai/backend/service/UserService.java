@@ -1,5 +1,9 @@
 package com.interviewai.backend.service;
 
+import com.interviewai.backend.dto.UpdateProfileRequest;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import com.interviewai.backend.dto.UserProfileResponse;
 import com.interviewai.backend.dto.RegisterRequest;
 import com.interviewai.backend.entity.User;
 import com.interviewai.backend.enums.Role;
@@ -56,6 +60,43 @@ public class UserService {
         String token = jwtService.generateToken(user.getEmail());
 
         return token;
+    }
+    public UserProfileResponse getProfile() {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        String email = authentication.getName();
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        UserProfileResponse response = new UserProfileResponse();
+
+        response.setFullName(user.getFullName());
+        response.setEmail(user.getEmail());
+        response.setRole(user.getRole().name());
+
+        return response;
+    }
+    public UserProfileResponse updateProfile(UpdateProfileRequest request) {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        String email = authentication.getName();
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        user.setFullName(request.getFullName());
+
+        userRepository.save(user);
+
+        UserProfileResponse response = new UserProfileResponse();
+        response.setFullName(user.getFullName());
+        response.setEmail(user.getEmail());
+        response.setRole(user.getRole().name());
+
+        return response;
     }
 
 }
