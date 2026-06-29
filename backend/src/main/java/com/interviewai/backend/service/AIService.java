@@ -10,13 +10,25 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
-
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.interviewai.backend.entity.Interview;
+import com.interviewai.backend.entity.Question;
+import com.interviewai.backend.repository.InterviewRepository;
+import com.interviewai.backend.repository.QuestionRepository;
 @Service
 public class AIService {
 
     @Autowired
     private RestTemplate restTemplate;
 
+    @Autowired
+    private InterviewRepository interviewRepository;
+
+    @Autowired
+    private QuestionRepository questionRepository;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
     @Value("${gemini.api.key}")
     private String apiKey;
 
@@ -26,8 +38,9 @@ public class AIService {
     public String getApiKey() {
         return apiKey;
     }
-    public String generateQuestions(String jobRole, String experienceLevel) {
-
+    public String generateQuestions(Long interviewId,String jobRole, String experienceLevel) {
+        Interview interview = interviewRepository.findById(interviewId)
+                .orElseThrow(() -> new RuntimeException("Interview not found"));
         String prompt = """
             Generate 5 interview questions.
 
@@ -60,6 +73,42 @@ public class AIService {
                         String.class
                 );
 
-        return response.getBody();
+        try {
+            JsonNode root = objectMapper.readTree(response.getBody());
+
+            String text = root
+                    .path("candidates")
+                    .get(0)
+                    .path("content")
+                    .path("parts")
+                    .get(0)
+                    .path("text")
+                    .asText();
+
+            String[] questions = text.split("\n");
+
+            List<String> questionList = new ArrayList<>();
+
+            for (String questionText : questions) {
+
+                if (!questionText.trim().isEmpty()) {
+
+                    Question question = new Question();
+
+                    question.setInterview(interview);
+                    question.setQuestionText(questionText.trim());
+                    question.setAnswer("");
+
+                    questionRepository.save(question);
+
+                    questionList.add(questionText.trim());
+                }
+            }
+
+            return String.join("\n", questionList);
+
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to parse Gemini response", e);
+        }
     }
 }

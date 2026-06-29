@@ -16,7 +16,11 @@ public class AIController {
         return aiService.getApiKey();
     }
     @GetMapping("/generate")
-    public String generateQuestions() {
-        return aiService.generateQuestions("Java Developer", "Fresher");
+    public String generateQuestions(  @RequestParam Long interviewId,
+                                      @RequestParam String jobRole,
+                                      @RequestParam String experienceLevel) {
+        return aiService.generateQuestions(interviewId,
+                jobRole,
+                experienceLevel);
     }
 }
