@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import com.interviewai.backend.dto.UpdateAnswerRequest;
 import org.springframework.http.ResponseEntity;
+import com.interviewai.backend.dto.EvaluationResponse;
 
 @RestController
 @RequestMapping("/api/questions")
@@ -31,6 +32,12 @@ public class QuestionController {
         questionService.updateAnswer(id, request);
 
         return ResponseEntity.ok("Answer saved successfully");
+    }
+    @PostMapping("/{id}/evaluate")
+    public EvaluationResponse evaluateAnswer(
+            @PathVariable Long id) {
+
+        return questionService.evaluateAnswer(id);
     }
 
 

@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.ArrayList;
 import com.interviewai.backend.dto.UpdateAnswerRequest;
+import com.interviewai.backend.service.AIService;
+import com.interviewai.backend.dto.EvaluationResponse;
 @Service
 public class QuestionService {
     @Autowired
@@ -18,6 +20,10 @@ public class QuestionService {
 
     @Autowired
     private InterviewRepository interviewRepository;
+
+    @Autowired
+    private AIService aiService;
+
     public QuestionResponse createQuestion(CreateQuestionRequest request) {
 
         Interview interview = interviewRepository.findById(request.getInterviewId())
@@ -69,6 +75,21 @@ public class QuestionService {
         question.setAnswer(request.getAnswer());
 
         questionRepository.save(question);
+    }
+    public EvaluationResponse evaluateAnswer(Long questionId) {
+
+        Question question = questionRepository.findById(questionId)
+                .orElseThrow(() -> new RuntimeException("Question not found"));
+
+        String feedback = aiService.evaluateAnswer(
+                question.getQuestionText(),
+                question.getAnswer()
+        );
+
+        EvaluationResponse response = new EvaluationResponse();
+        response.setFeedback(feedback);
+
+        return response;
     }
 
 }

@@ -111,4 +111,80 @@ public class AIService {
             throw new RuntimeException("Failed to parse Gemini response", e);
         }
     }
+    public String evaluateAnswer(String question, String answer) {
+
+        String prompt = """
+        You are an expert Java technical interviewer.
+
+        Evaluate the candidate's answer.
+
+        Question:
+        %s
+
+        Candidate Answer:
+        %s
+
+        Return the response EXACTLY in the following format.
+
+        Score: X/10
+
+        Strengths:
+        - Point 1
+        - Point 2
+
+        Weaknesses:
+        - Point 1
+        - Point 2
+
+        Correct Answer:
+        <correct answer>
+
+        Do not use markdown.
+        Do not use headings.
+        Do not use ###.
+        Do not use ---.
+        Do not add introductory sentences.
+        Return plain text only.
+        """.formatted(question, answer);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        Map<String, Object> part = new HashMap<>();
+        part.put("text", prompt);
+
+        Map<String, Object> content = new HashMap<>();
+        content.put("parts", List.of(part));
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("contents", List.of(content));
+
+        HttpEntity<Map<String, Object>> entity =
+                new HttpEntity<>(body, headers);
+
+        ResponseEntity<String> response =
+                restTemplate.exchange(
+                        apiUrl + "?key=" + apiKey,
+                        HttpMethod.POST,
+                        entity,
+                        String.class
+                );
+
+        try {
+
+            JsonNode root = objectMapper.readTree(response.getBody());
+
+            return root
+                    .path("candidates")
+                    .get(0)
+                    .path("content")
+                    .path("parts")
+                    .get(0)
+                    .path("text")
+                    .asText();
+
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to parse Gemini response", e);
+        }
+    }
 }
