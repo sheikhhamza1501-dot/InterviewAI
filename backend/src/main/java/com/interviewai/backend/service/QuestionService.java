@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.ArrayList;
+import com.interviewai.backend.dto.UpdateAnswerRequest;
 @Service
 public class QuestionService {
     @Autowired
@@ -60,4 +61,14 @@ public class QuestionService {
 
         return responseList;
     }
+    public void updateAnswer(Long questionId, UpdateAnswerRequest request) {
+
+        Question question = questionRepository.findById(questionId)
+                .orElseThrow(() -> new RuntimeException("Question not found"));
+
+        question.setAnswer(request.getAnswer());
+
+        questionRepository.save(question);
+    }
+
 }
