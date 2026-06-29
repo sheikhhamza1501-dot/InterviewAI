@@ -16,6 +16,7 @@ import com.interviewai.backend.entity.Interview;
 import com.interviewai.backend.entity.Question;
 import com.interviewai.backend.repository.InterviewRepository;
 import com.interviewai.backend.repository.QuestionRepository;
+import com.interviewai.backend.dto.EvaluationResponse;
 @Service
 public class AIService {
 
@@ -111,7 +112,7 @@ public class AIService {
             throw new RuntimeException("Failed to parse Gemini response", e);
         }
     }
-    public String evaluateAnswer(String question, String answer) {
+    public  EvaluationResponse  evaluateAnswer(String question, String answer) {
 
         String prompt = """
         You are an expert Java technical interviewer.
@@ -124,27 +125,26 @@ public class AIService {
         Candidate Answer:
         %s
 
-        Return the response EXACTLY in the following format.
+        Return ONLY valid JSON.
 
-        Score: X/10
+        Do not return markdown.
+        Do not return explanation.
+        Do not wrap JSON inside ```.
 
-        Strengths:
-        - Point 1
-        - Point 2
+        Use exactly this format:
 
-        Weaknesses:
-        - Point 1
-        - Point 2
-
-        Correct Answer:
-        <correct answer>
-
-        Do not use markdown.
-        Do not use headings.
-        Do not use ###.
-        Do not use ---.
-        Do not add introductory sentences.
-        Return plain text only.
+        {
+          "score":"8/10",
+          "strengths":[
+            "point1",
+            "point2"
+          ],
+          "weaknesses":[
+            "point1",
+            "point2"
+          ],
+          "correctAnswer":"..."
+        }
         """.formatted(question, answer);
 
         HttpHeaders headers = new HttpHeaders();
@@ -174,7 +174,7 @@ public class AIService {
 
             JsonNode root = objectMapper.readTree(response.getBody());
 
-            return root
+            String text = root
                     .path("candidates")
                     .get(0)
                     .path("content")
@@ -182,7 +182,35 @@ public class AIService {
                     .get(0)
                     .path("text")
                     .asText();
+            JsonNode evaluationNode = objectMapper.readTree(text);
 
+            EvaluationResponse evaluationResponse = new EvaluationResponse();
+
+            evaluationResponse.setScore(
+                    evaluationNode.path("score").asText()
+            );
+
+            evaluationResponse.setStrengths(
+                    objectMapper.convertValue(
+                            evaluationNode.path("strengths"),
+                            objectMapper.getTypeFactory()
+                                    .constructCollectionType(List.class, String.class)
+                    )
+            );
+
+            evaluationResponse.setWeaknesses(
+                    objectMapper.convertValue(
+                            evaluationNode.path("weaknesses"),
+                            objectMapper.getTypeFactory()
+                                    .constructCollectionType(List.class, String.class)
+                    )
+            );
+
+            evaluationResponse.setCorrectAnswer(
+                    evaluationNode.path("correctAnswer").asText()
+            );
+
+            return evaluationResponse;
         } catch (Exception e) {
             throw new RuntimeException("Failed to parse Gemini response", e);
         }

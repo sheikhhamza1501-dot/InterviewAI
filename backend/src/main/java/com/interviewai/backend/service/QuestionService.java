@@ -76,20 +76,35 @@ public class QuestionService {
 
         questionRepository.save(question);
     }
+
     public EvaluationResponse evaluateAnswer(Long questionId) {
 
         Question question = questionRepository.findById(questionId)
                 .orElseThrow(() -> new RuntimeException("Question not found"));
 
-        String feedback = aiService.evaluateAnswer(
+        EvaluationResponse evaluation = aiService.evaluateAnswer(
                 question.getQuestionText(),
                 question.getAnswer()
         );
 
-        EvaluationResponse response = new EvaluationResponse();
-        response.setFeedback(feedback);
+        // Save the score
+        question.setScore(evaluation.getScore());
 
-        return response;
+        // Save the feedback as one formatted string
+        String feedback = "Strengths:\n"
+                + String.join("\n", evaluation.getStrengths())
+                + "\n\nWeaknesses:\n"
+                + String.join("\n", evaluation.getWeaknesses())
+                + "\n\nCorrect Answer:\n"
+                + evaluation.getCorrectAnswer();
+
+        question.setFeedback(feedback);
+
+        // Save to MySQL
+        questionRepository.save(question);
+
+        return evaluation;
+    }
     }
 
-}
+

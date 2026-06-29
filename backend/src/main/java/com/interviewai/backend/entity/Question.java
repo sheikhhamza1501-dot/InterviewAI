@@ -14,6 +14,12 @@ public class Question {
 
     private String answer;
 
+    private String score;
+
+    @Column(columnDefinition = "TEXT")
+    private String feedback;
+
+
     @ManyToOne
     @JoinColumn(name = "interview_id")
     private Interview interview;
@@ -45,4 +51,21 @@ public class Question {
     public void setInterview(Interview interview) {
         this.interview = interview;
     }
+
+    public String getScore() {
+        return score;
+    }
+
+    public void setScore(String score) {
+        this.score = score;
+    }
+
+    public String getFeedback() {
+        return feedback;
+    }
+
+    public void setFeedback(String feedback) {
+        this.feedback = feedback;
+    }
+
 }
