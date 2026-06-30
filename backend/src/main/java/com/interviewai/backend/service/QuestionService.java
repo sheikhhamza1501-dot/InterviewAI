@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import com.interviewai.backend.dto.UpdateAnswerRequest;
 import com.interviewai.backend.service.AIService;
 import com.interviewai.backend.dto.EvaluationResponse;
+import java.util.Arrays;
 @Service
 public class QuestionService {
     @Autowired
@@ -74,6 +75,10 @@ public class QuestionService {
 
         question.setAnswer(request.getAnswer());
 
+// Clear previous evaluation
+        question.setScore(null);
+        question.setFeedback(null);
+
         questionRepository.save(question);
     }
 
@@ -82,15 +87,21 @@ public class QuestionService {
         Question question = questionRepository.findById(questionId)
                 .orElseThrow(() -> new RuntimeException("Question not found"));
 
+        // If already evaluated, return the saved evaluation
+        if (question.getScore() != null && !question.getScore().isBlank()
+                && question.getFeedback() != null && !question.getFeedback().isBlank()) {
+
+            return buildEvaluationResponse(question);
+        }
+
+        // Otherwise, call Gemini
         EvaluationResponse evaluation = aiService.evaluateAnswer(
                 question.getQuestionText(),
                 question.getAnswer()
         );
 
-        // Save the score
         question.setScore(evaluation.getScore());
 
-        // Save the feedback as one formatted string
         String feedback = "Strengths:\n"
                 + String.join("\n", evaluation.getStrengths())
                 + "\n\nWeaknesses:\n"
@@ -100,10 +111,47 @@ public class QuestionService {
 
         question.setFeedback(feedback);
 
-        // Save to MySQL
         questionRepository.save(question);
 
         return evaluation;
+    }
+
+    private EvaluationResponse buildEvaluationResponse(Question question) {
+
+        EvaluationResponse response = new EvaluationResponse();
+
+        response.setScore(question.getScore());
+
+        if (question.getFeedback() != null) {
+
+            String feedback = question.getFeedback();
+
+            String[] parts = feedback.split("\\n\\nCorrect Answer:\\n");
+
+            String strengthsAndWeaknesses = parts[0];
+            String correctAnswer = parts.length > 1 ? parts[1] : "";
+
+            String[] sections = strengthsAndWeaknesses.split("\\n\\nWeaknesses:\\n");
+
+            String strengthsSection = sections[0]
+                    .replace("Strengths:\n", "");
+
+            String weaknessesSection = sections.length > 1
+                    ? sections[1]
+                    : "";
+
+            response.setStrengths(
+                    Arrays.asList(strengthsSection.split("\\n"))
+            );
+
+            response.setWeaknesses(
+                    Arrays.asList(weaknessesSection.split("\\n"))
+            );
+
+            response.setCorrectAnswer(correctAnswer);
+        }
+
+        return response;
     }
     }
 
