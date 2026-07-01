@@ -4,7 +4,9 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.JoinColumn;
-
+import java.util.List;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.CascadeType;
 @Entity
 @Table(name = "interviews")
 public class Interview {
@@ -21,6 +23,13 @@ public class Interview {
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
+
+    @OneToMany(
+            mappedBy = "interview",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    private List<Question> questions;
 
     public Interview() {
     }
@@ -59,4 +68,6 @@ public class Interview {
     public void setUser(User user) {
         this.user = user;
     }
+
+
 }

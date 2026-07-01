@@ -1,27 +1,59 @@
-import { useEffect } from "react";
-import api from "./services/api";
+import { Routes, Route } from "react-router-dom";
+
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Dashboard from "./pages/Dashboard";
+import CreateInterview from "./pages/CreateInterview";
+import InterviewDetails from "./pages/InterviewDetails";
+import ProtectedRoute from "./routes/ProtectedRoute";
+import EditInterview from "./pages/EditInterview";
 
 function App() {
 
-    useEffect(() => {
-
-        api.get("/interviews")
-            .then((response) => {
-                console.log("Protected API Success");
-                console.log(response.data);
-            })
-            .catch((error) => {
-                console.log(error);
-            });
-
-    }, []);
-
     return (
-        <div className="container mt-5">
-            <h1>Interview AI</h1>
-            <p>JWT Authentication Test</p>
-        </div>
+
+        <Routes>
+
+            <Route path="/" element={<Login />} />
+
+            <Route path="/register" element={<Register />} />
+
+            <Route path="/dashboard" element={
+                <ProtectedRoute>
+                    <Dashboard/>
+                </ProtectedRoute>
+               } 
+               />
+
+            <Route
+                path="/create"
+                element={
+                 <ProtectedRoute>
+                     <CreateInterview />
+                 </ProtectedRoute>
+               }
+            />
+
+            <Route
+                path="/interview/:id"
+                element={
+                    <ProtectedRoute>
+                         <InterviewDetails />
+                    </ProtectedRoute>
+              }
+            />
+<Route
+    path="/edit/:id"
+    element={
+        <ProtectedRoute>
+            <EditInterview />
+        </ProtectedRoute>
+    }
+/>
+        </Routes>
+
     );
+
 }
 
 export default App;
