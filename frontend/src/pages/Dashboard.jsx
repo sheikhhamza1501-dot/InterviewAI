@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../services/api";
 import Navbar from "../component/Navbar";
-import { deleteInterview } from "../services/interviewService";
+import { deleteInterview } from "../services/InterviewService";
 import { useNavigate } from "react-router-dom";
 
 
