@@ -12,10 +12,13 @@ public class Question {
     @Column(length = 1000)
     private String questionText;
 
+    @Lob
+    @Column(columnDefinition = "TEXT")
     private String answer;
 
     private String score;
 
+    @Lob
     @Column(columnDefinition = "TEXT")
     private String feedback;
 
