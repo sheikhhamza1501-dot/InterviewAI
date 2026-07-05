@@ -6,7 +6,7 @@ public class InterviewResponse {
         private String jobRole;
         private String experienceLevel;
         private String createdAt;
-
+    private Boolean completed;
         public InterviewResponse() {
         }
 
@@ -41,4 +41,12 @@ public class InterviewResponse {
         public void setCreatedAt(String createdAt) {
             this.createdAt = createdAt;
         }
+
+    public Boolean getCompleted() {
+        return completed;
+    }
+
+    public void setCompleted(Boolean completed) {
+        this.completed = completed;
+    }
 }

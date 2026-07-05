@@ -90,11 +90,78 @@ if (loading) {
 
 }
 
+const getTotalInterviews = () => {
+    return interviews.length;
+};
+
+const getCompletedInterviews = () => {
+    return interviews.filter(
+        interview => interview.completed === true
+    ).length;
+};
+
+const getPendingInterviews = () => {
+    return interviews.filter(
+        interview => !interview.completed
+    ).length;
+};
 return (
     <>
         <Navbar />
 
         <div className="container mt-4">
+
+          <div className="row mb-4">
+
+    <div className="col-md-3">
+
+        <div className="card shadow text-center">
+
+            <div className="card-body">
+
+                <h5>Total Interviews</h5>
+
+                <h2>{getTotalInterviews()}</h2>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div className="col-md-3">
+
+        <div className="card shadow text-center">
+
+            <div className="card-body">
+
+                <h5>Completed</h5>
+
+                <h2>{getCompletedInterviews()}</h2>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div className="col-md-3">
+
+        <div className="card shadow text-center">
+
+            <div className="card-body">
+
+                <h5>Pending</h5>
+
+                <h2>{getPendingInterviews()}</h2>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>  
 
             <div className="d-flex justify-content-between align-items-center mb-4">
 
@@ -147,7 +214,24 @@ return (
                                 <p className="mb-2">
                                     <strong>Experience:</strong> {interview.experienceLevel}
                                 </p>
+                                <p className="mb-2">
+    <strong>Status:</strong>{" "}
 
+    {interview.completed ? (
+
+        <span className="badge bg-success">
+            Completed
+        </span>
+
+    ) : (
+
+        <span className="badge bg-warning text-dark">
+            Pending
+        </span>
+
+    )}
+
+</p>
                                 <p className="text-muted">
                                     <strong>Created:</strong>{" "}
                                     {new Date(interview.createdAt).toLocaleString()}

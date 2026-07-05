@@ -113,6 +113,21 @@ public class QuestionService {
 
         questionRepository.save(question);
 
+        Interview interview = question.getInterview();
+
+        List<Question> questions =
+                questionRepository.findByInterview(interview);
+
+        boolean completed = questions.stream()
+                .allMatch(q ->
+                        q.getScore() != null &&
+                                !q.getScore().isBlank()
+                );
+
+        interview.setCompleted(completed);
+
+        interviewRepository.save(interview);
+
         return evaluation;
     }
 

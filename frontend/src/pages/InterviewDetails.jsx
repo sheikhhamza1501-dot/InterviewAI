@@ -143,6 +143,31 @@ const getProgress = () => {
     );
 };
 
+const handleGenerateQuestions = async () => {
+
+    try {
+
+        await api.get("/ai/generate", {
+            params: {
+                interviewId: interview.id,
+                jobRole: interview.jobRole,
+                experienceLevel: interview.experienceLevel,
+            },
+        });
+
+        alert("Questions generated successfully!");
+
+        fetchQuestions();
+
+    } catch (error) {
+
+        console.log(error);
+
+        alert("Failed to generate questions.");
+
+    }
+
+};
 
     return (
 
@@ -217,6 +242,8 @@ const getProgress = () => {
 
             <div className="card shadow p-4">
 
+                
+
                 <h3>{interview.jobRole}</h3>
 
                 <p>
@@ -242,6 +269,13 @@ const getProgress = () => {
            </div>
 
 <hr />
+
+<button
+    className="btn btn-primary"
+    onClick={handleGenerateQuestions}
+>
+    Generate Questions
+</button>
 
 <h3 className="mt-4">
     Interview Questions

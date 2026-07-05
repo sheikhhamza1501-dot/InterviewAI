@@ -20,6 +20,8 @@ public class Interview {
 
     private LocalDateTime createdAt;
 
+    private Boolean completed = false;
+
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
@@ -67,6 +69,14 @@ public class Interview {
 
     public void setUser(User user) {
         this.user = user;
+    }
+
+    public Boolean getCompleted() {
+        return completed;
+    }
+
+    public void setCompleted(Boolean completed) {
+        this.completed = completed;
     }
 
 

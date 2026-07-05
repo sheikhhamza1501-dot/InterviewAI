@@ -50,7 +50,6 @@ public class InterviewService {
         response.setJobRole(interview.getJobRole());
         response.setExperienceLevel(interview.getExperienceLevel());
         response.setCreatedAt(interview.getCreatedAt().toString());
-
         return response;
     }
     public List<InterviewResponse> getAllInterviews() {
@@ -74,7 +73,7 @@ public class InterviewService {
             response.setJobRole(interview.getJobRole());
             response.setExperienceLevel(interview.getExperienceLevel());
             response.setCreatedAt(interview.getCreatedAt().toString());
-
+            response.setCompleted(interview.getCompleted());
             responseList.add(response);
         }
 
@@ -110,6 +109,7 @@ public class InterviewService {
         response.setJobRole(interview.getJobRole());
         response.setExperienceLevel(interview.getExperienceLevel());
         response.setCreatedAt(interview.getCreatedAt().toString());
+        response.setCompleted(interview.getCompleted());
 
         return response;
     }
