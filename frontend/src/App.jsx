@@ -7,6 +7,7 @@ import CreateInterview from "./pages/CreateInterview";
 import InterviewDetails from "./pages/InterviewDetails";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import EditInterview from "./pages/EditInterview";
+import InterviewReport from "./pages/InterviewReport";
 
 function App() {
 
@@ -42,6 +43,14 @@ function App() {
                     </ProtectedRoute>
               }
             />
+            <Route
+    path="/report/:id"
+    element={
+        <ProtectedRoute>
+            <InterviewReport />
+        </ProtectedRoute>
+    }
+/>
 <Route
     path="/edit/:id"
     element={

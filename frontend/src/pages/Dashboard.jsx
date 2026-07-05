@@ -243,7 +243,12 @@ return (
                                 >
                                     View Details
                                 </button>
-
+                                <button
+    className="btn btn-success ms-2"
+    onClick={() => navigate(`/report/${interview.id}`)}
+>
+    View Report
+</button>
                                 <button
                                     className="btn btn-warning me-2"
                                     onClick={() => navigate(`/edit/${interview.id}`)}

@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import org.springframework.web.bind.annotation.PathVariable;
 import com.interviewai.backend.dto.UpdateInterviewRequest;
+import com.interviewai.backend.dto.InterviewReportResponse;
 
 @RestController
 @RequestMapping("/api/interviews")
@@ -27,6 +28,12 @@ public class InterviewController {
     @GetMapping("/{id}")
     public InterviewResponse getInterviewById(@PathVariable Long id) {
         return interviewService.getInterviewById(id);
+    }
+    @GetMapping("/{id}/report")
+    public InterviewReportResponse getInterviewReport(@PathVariable Long id) {
+
+        return interviewService.getInterviewReport(id);
+
     }
     @PutMapping("/{id}")
     public InterviewResponse updateInterview(
