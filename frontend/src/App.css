@@ -182,3 +182,13 @@
     border-right-color: var(--border);
   }
 }
+
+.interview-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.interview-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 25px rgba(0,0,0,0.15);
+}

@@ -14,3 +14,10 @@ export const deleteInterview = async (id) => {
     return response.data;
 
 };
+export const getDashboardStats = async () => {
+
+    const response = await api.get("/interviews/dashboard/stats");
+
+    return response.data;
+
+};

@@ -14,6 +14,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import com.interviewai.backend.entity.User;
 import java.time.LocalDateTime;
+import com.interviewai.backend.dto.DashboardStatsResponse;
 
 import com.interviewai.backend.entity.Question;
 import com.interviewai.backend.repository.QuestionRepository;
@@ -217,5 +218,104 @@ public class InterviewService {
 
         return response;
 
+    }
+    public DashboardStatsResponse getDashboardStats() {
+
+        Authentication authentication = SecurityContextHolder
+                .getContext()
+                .getAuthentication();
+
+        String email = authentication.getName();
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        List<Interview> interviews = interviewRepository.findByUser(user);
+
+        DashboardStatsResponse response = new DashboardStatsResponse();
+
+        response.setTotalInterviews(interviews.size());
+
+        int completed = 0;
+
+        for (Interview interview : interviews) {
+
+            if (Boolean.TRUE.equals(interview.getCompleted())) {
+
+                completed++;
+
+            }
+
+        }
+
+        response.setCompletedInterviews(completed);
+
+        int pending = interviews.size() - completed;
+
+        response.setPendingInterviews(pending);
+
+        double totalScore = 0;
+
+        int evaluatedQuestions = 0;
+
+        for (Interview interview : interviews) {
+
+            List<Question> questions = questionRepository.findByInterview(interview);
+
+            for (Question question : questions) {
+
+                if (question.getScore() != null && !question.getScore().isBlank()) {
+
+                    String scoreText = question.getScore()
+                            .replace("/10", "")
+                            .trim();
+
+                    totalScore += Double.parseDouble(scoreText);
+
+                    evaluatedQuestions++;
+
+                }
+
+            }
+
+        }
+
+        if (evaluatedQuestions > 0) {
+
+            response.setAverageScore(totalScore / evaluatedQuestions);
+
+        }
+
+        double bestScore = 0;
+
+        for (Interview interview : interviews) {
+
+            List<Question> questions = questionRepository.findByInterview(interview);
+
+            for (Question question : questions) {
+
+                if (question.getScore() != null && !question.getScore().isBlank()) {
+
+                    double score = Double.parseDouble(
+                            question.getScore()
+                                    .replace("/10", "")
+                                    .trim()
+                    );
+
+                    if (score > bestScore) {
+
+                        bestScore = score;
+
+                    }
+
+                }
+
+            }
+
+        }
+
+        response.setBestScore(bestScore);
+
+        return response;
     }
 }

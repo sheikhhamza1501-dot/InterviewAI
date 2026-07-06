@@ -9,6 +9,7 @@ import java.util.List;
 import org.springframework.web.bind.annotation.PathVariable;
 import com.interviewai.backend.dto.UpdateInterviewRequest;
 import com.interviewai.backend.dto.InterviewReportResponse;
+import com.interviewai.backend.dto.DashboardStatsResponse;
 
 @RestController
 @RequestMapping("/api/interviews")
@@ -45,6 +46,13 @@ public class InterviewController {
     @DeleteMapping("/{id}")
     public String deleteInterview(@PathVariable Long id) {
         return interviewService.deleteInterview(id);
+    }
+
+    @GetMapping("/dashboard/stats")
+    public DashboardStatsResponse getDashboardStats() {
+
+        return interviewService.getDashboardStats();
+
     }
 }
 
