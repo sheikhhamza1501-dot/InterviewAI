@@ -11,10 +11,19 @@ function Dashboard() {
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
+    const [searchTerm, setSearchTerm] = useState("");
+    const [statusFilter, setStatusFilter] = useState("All");
+    const [sortOrder, setSortOrder] = useState("Newest");
+    const [message, setMessage] = useState("");
+    const [messageType, setMessageType] = useState("");
+    const [deletingId, setDeletingId] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1);
+
+    const interviewsPerPage = 5;
 
     useEffect(() => {
         fetchInterviews();
-         fetchDashboardStats();
+        fetchDashboardStats();
     }, []);
 
     const fetchInterviews = async () => {
@@ -42,543 +51,742 @@ function Dashboard() {
 
     const fetchDashboardStats = async () => {
 
-    try {
+        try {
 
-        const data = await getDashboardStats();
+            const data = await getDashboardStats();
 
-        setStats(data);
+            setStats(data);
 
-    } catch (error) {
+        } catch (error) {
 
-        console.log(error);
+            console.log(error);
 
-    }
+        }
 
-};
+    };
 
     const handleDelete = async (id) => {
 
-    const confirmDelete = window.confirm(
-        "Are you sure you want to delete this interview?"
-    );
+        const confirmDelete = window.confirm(
+            "Are you sure you want to delete this interview?"
+        );
 
-    if (!confirmDelete) return;
+        if (!confirmDelete) return;
 
-    try {
+        try {
+            setDeletingId(id);
+            await deleteInterview(id);
+            setDeletingId(null);
 
-        await deleteInterview(id);
+            setMessage("Interview deleted successfully!");
+            setMessageType("success");
 
-        alert("Interview deleted successfully!");
+            setTimeout(() => {
+                setMessage("");
+            }, 3000);
 
-        fetchInterviews();
+            fetchInterviews();
 
-    } catch (error) {
+        } catch (error) {
 
-        console.log(error);
+            console.log(error);
+            setDeletingId(null);
+            setMessage("Failed to delete interview.");
+            setMessageType("danger");
 
-        alert("Failed to delete interview.");
+            setTimeout(() => {
+                setMessage("");
+            }, 3000);
+
+        }
+
+    };
+
+    if (loading) {
+
+        return (
+
+            <>
+                <Navbar />
+
+                <div className="container text-center mt-5">
+
+                    <div
+                        className="spinner-border text-primary"
+                        role="status"
+                    ></div>
+
+                    <p className="mt-3">
+                        Loading Interviews...
+                    </p>
+
+                </div>
+
+            </>
+
+        );
 
     }
 
-};
+    const filteredInterviews = interviews
+        .filter((interview) => {
 
-if (loading) {
+            const matchesSearch = interview.jobRole
+                .toLowerCase()
+                .includes(searchTerm.toLowerCase());
 
-    return (
+            const matchesStatus =
+                statusFilter === "All" ||
+                (statusFilter === "Completed" && interview.completed) ||
+                (statusFilter === "Pending" && !interview.completed);
 
-        <>
-            <Navbar />
+            return matchesSearch && matchesStatus;
 
-            <div className="container text-center mt-5">
+        })
+        .sort((a, b) => {
 
-                <div
-                    className="spinner-border text-primary"
-                    role="status"
-                ></div>
+            if (sortOrder === "Newest") {
+                return new Date(b.createdAt) - new Date(a.createdAt);
+            }
 
-                <p className="mt-3">
-                    Loading Interviews...
-                </p>
+            return new Date(a.createdAt) - new Date(b.createdAt);
 
-            </div>
+        });
 
-        </>
+    const indexOfLastInterview = currentPage * interviewsPerPage;
 
+    const indexOfFirstInterview =
+        indexOfLastInterview - interviewsPerPage;
+
+    const currentInterviews =
+        filteredInterviews.slice(
+            indexOfFirstInterview,
+            indexOfLastInterview
+        );
+
+    const totalPages = Math.ceil(
+        filteredInterviews.length / interviewsPerPage
     );
 
-}
+    return (
+        <>
+            <Navbar />
+            {message && (
 
+                <div className={`alert alert-${messageType} text-center m-3`}>
 
-return (
-    <>
-        <Navbar />
-
-        <div className="container mt-4">
-
-            {stats && (
-
-    <div className="row g-3 mb-4 justify-content-center">
-
-        <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
-
-          <div className="card shadow-lg border-0 rounded-4 text-center h-100">
-
-                <div className="card-body">
-
-                    <div className="mb-2">
-
-    <span style={{ fontSize: "2rem" }}>
-        📊
-    </span>
-
-</div>
-
-<h6 className="fw-bold">
-    Total Interviews
-</h6>
-
-                    <h2>{stats.totalInterviews}</h2>
+                    {message}
 
                 </div>
 
-            </div>
-
-        </div>
-
-      <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
-
-            <div className="card shadow-lg border-0 rounded-4 text-center h-100">
-
-                <div className="card-body">
-
-                    <div className="mb-2">
-
-    <span style={{ fontSize: "2rem" }}>
-        ✅
-    </span>
-
-</div>
-
-<h6 className="fw-bold">
-    Completed
-</h6>
-
-                    <h2 className="text-success">
-                        {stats.completedInterviews}
-                    </h2>
-
-                </div>
-
-            </div>
-
-        </div>
-
-      <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
-
-          <div className="card shadow-lg border-0 rounded-4 text-center h-100">
-
-                <div className="card-body">
-
-                    <div className="mb-2">
-
-    <span style={{ fontSize: "2rem" }}>
-        ⏳
-    </span>
-
-</div>
-
-<h6 className="fw-bold">
-    Pending
-</h6>
-
-                    <h2 className="text-warning">
-                        {stats.pendingInterviews}
-                    </h2>
-
-                </div>
-
-            </div>
-
-        </div>
-
-       <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
-
-           <div className="card shadow-lg border-0 rounded-4 text-center h-100">
-
-                <div className="card-body">
-
-                  <div className="mb-2">
-
-    <span style={{ fontSize: "2rem" }}>
-        ⭐
-    </span>
-
-</div>
-
-<h6 className="fw-bold">
-    Average Score
-</h6>
-
-                    <h2 className="text-primary">
-
-                        {stats.averageScore
-                            ? stats.averageScore.toFixed(1)
-                            : "0.0"}
-
-                        /10
-
-                    </h2>
-
-                </div>
-
-            </div>
-</div>
-
-           <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
-
-   <div className="card shadow-lg border-0 rounded-4 text-center h-100">
-
-        <div className="card-body">
-
-            <div className="mb-2">
-
-    <span style={{ fontSize: "2rem" }}>
-        🏆
-    </span>
-
-</div>
-
-<h6 className="fw-bold">
-    Best Score
-</h6>
-
-            <h2 className="text-success">
-
-                {stats.bestScore
-                    ? stats.bestScore.toFixed(1)
-                    : "0.0"}
-
-                /10
-
-            </h2>
-
-        </div>
-
-    </div>
-
-</div>
-</div>
             )}
 
-            {stats && (
 
-<div className="card shadow-lg border-0 rounded-4 mb-4">
+            <div className="container mt-4">
 
-    <div className="card-body">
+                {stats && (
 
-        <h5 className="mb-3">
-            📈 Interview Progress
-        </h5>
+                    <div className="row g-3 mb-4 justify-content-center">
 
-        <div className="progress" style={{ height: "25px" }}>
+                        <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
 
-            <div
-                className="progress-bar bg-success"
-                role="progressbar"
-                style={{
-                    width: `${
-                        stats.totalInterviews > 0
-                            ? (stats.completedInterviews / stats.totalInterviews) * 100
-                            : 0
-                    }%`
-                }}
-            >
+                            <div className="card shadow-lg border-0 rounded-4 text-center h-100">
 
-                {stats.totalInterviews > 0
-                    ? Math.round(
-                        (stats.completedInterviews / stats.totalInterviews) * 100
-                    )
-                    : 0
-                }%
+                                <div className="card-body">
 
-            </div>
+                                    <div className="mb-2">
 
-        </div>
+                                        <span style={{ fontSize: "2rem" }}>
+                                            📊
+                                        </span>
 
-        <p className="mt-3 mb-0 text-muted">
+                                    </div>
 
-            {stats.completedInterviews} of {stats.totalInterviews} interviews completed
+                                    <h6 className="fw-bold">
+                                        Total Interviews
+                                    </h6>
 
-        </p>
+                                    <h2>{stats.totalInterviews}</h2>
 
-    </div>
-
-</div>
-
-)}
-
-{stats && (
-
-<div className="card shadow-lg border-0 rounded-4 mb-4">
-
-    <div className="card-body text-center">
-
-        <h5 className="mb-3">
-            🎯 Performance
-        </h5>
-
-        {
-
-            stats.averageScore >= 8 ?
-
-            (
-
-                <span className="badge bg-success fs-6 p-3">
-
-                    🟢 Excellent Performance
-
-                </span>
-
-            )
-
-            :
-
-            stats.averageScore >= 6 ?
-
-            (
-
-                <span className="badge bg-warning text-dark fs-6 p-3">
-
-                    🟡 Good Performance
-
-                </span>
-
-            )
-
-            :
-
-            (
-
-                <span className="badge bg-danger fs-6 p-3">
-
-                    🔴 Needs Improvement
-
-                </span>
-
-            )
-
-        }
-
-    </div>
-
-</div>
-
-)}
-<div className="card shadow-lg border-0 rounded-4 mb-4">
-
-    <div className="card-body">
-
-        <h5 className="mb-3">
-            🕒 Recent Activity
-        </h5>
-
-        {
-
-            interviews.length === 0 ?
-
-            (
-
-                <p className="text-muted">
-                    No recent interviews.
-                </p>
-
-            )
-
-            :
-
-            (
-
-                interviews
-                    .slice(0, 3)
-                    .map((interview) => (
-
-                        <div
-                            key={interview.id}
-                            className="border-bottom pb-2 mb-2"
-                        >
-
-                            <strong>
-
-                                {interview.jobRole}
-
-                            </strong>
-
-                            <br />
-
-                            <small className="text-muted">
-
-                                {interview.experienceLevel}
-
-                                {" • "}
-
-                                {new Date(
-                                    interview.createdAt
-                                ).toLocaleString()}
-
-                            </small>
-
-                        </div>
-
-                    ))
-
-            )
-
-        }
-
-    </div>
-
-</div>
-
-
-
-
-       <div className="d-flex justify-content-between align-items-center mb-4">
-
-    <div>
-
-        <h2 className="fw-bold">
-            Dashboard
-        </h2>
-
-        <p className="text-muted">
-            Manage your interviews
-        </p>
-
-    </div>
-
-    <div>
-
-        <button
-            className="btn btn-success me-2"
-            onClick={() => navigate("/create")}
-        >
-            ➕ Create Interview
-        </button>
-
-        <button
-            className="btn btn-primary"
-            onClick={() => {
-                fetchInterviews();
-                fetchDashboardStats();
-            }}
-        >
-            🔄 Refresh
-        </button>
-
-    </div>
-
-</div>
-
-            {
-                interviews.length === 0 ?
-
-                (
-
-                    <div className="alert alert-info text-center">
-
-                        <h4>No Interviews Found</h4>
-
-                        <p>
-                            Click "Create Interview" to create your first interview.
-                        </p>
-
-                    </div>
-
-                )
-
-                :
-
-                (
-
-                    interviews.map((interview) => (
-
-                        <div
-                            key={interview.id}
-                                className="card shadow border-0 rounded-4 mb-4 interview-card"
-                        >
-
-                            <div className="card-body p-4">
-
-                                <h4>{interview.jobRole}</h4>
-
-                                <p className="mb-2">
-                                    <strong>Experience:</strong> {interview.experienceLevel}
-                                </p>
-                                <p className="mb-2">
-    <strong>Status:</strong>{" "}
-
-    {interview.completed ? (
-
-        <span className="badge bg-success">
-            Completed
-        </span>
-
-    ) : (
-
-        <span className="badge bg-warning text-dark">
-            Pending
-        </span>
-
-    )}
-
-</p>
-                                <p className="text-muted">
-                                    <strong>Created:</strong>{" "}
-                                    {new Date(interview.createdAt).toLocaleString()}
-                                </p>
-
-                             <button
-    className="btn btn-primary btn-sm me-2"
-    onClick={() => navigate(`/interview/${interview.id}`)}
->
-    👁 View
-</button>
-
-<button
-    className="btn btn-success btn-sm me-2"
-    onClick={() => navigate(`/report/${interview.id}`)}
->
-    📄 Report
-</button>
-
-<button
-    className="btn btn-warning btn-sm me-2"
-    onClick={() => navigate(`/edit/${interview.id}`)}
->
-    ✏ Edit
-</button>
-
-<button
-    className="btn btn-danger btn-sm"
-    onClick={() => handleDelete(interview.id)}
->
-    🗑 Delete
-</button>
-                            
+                                </div>
 
                             </div>
 
                         </div>
 
-                    ))
+                        <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
 
-                )
-            }
+                            <div className="card shadow-lg border-0 rounded-4 text-center h-100">
 
-        </div>
+                                <div className="card-body">
 
-    </>
-);
+                                    <div className="mb-2">
+
+                                        <span style={{ fontSize: "2rem" }}>
+                                            ✅
+                                        </span>
+
+                                    </div>
+
+                                    <h6 className="fw-bold">
+                                        Completed
+                                    </h6>
+
+                                    <h2 className="text-success">
+                                        {stats.completedInterviews}
+                                    </h2>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
+
+                            <div className="card shadow-lg border-0 rounded-4 text-center h-100">
+
+                                <div className="card-body">
+
+                                    <div className="mb-2">
+
+                                        <span style={{ fontSize: "2rem" }}>
+                                            ⏳
+                                        </span>
+
+                                    </div>
+
+                                    <h6 className="fw-bold">
+                                        Pending
+                                    </h6>
+
+                                    <h2 className="text-warning">
+                                        {stats.pendingInterviews}
+                                    </h2>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
+
+                            <div className="card shadow-lg border-0 rounded-4 text-center h-100">
+
+                                <div className="card-body">
+
+                                    <div className="mb-2">
+
+                                        <span style={{ fontSize: "2rem" }}>
+                                            ⭐
+                                        </span>
+
+                                    </div>
+
+                                    <h6 className="fw-bold">
+                                        Average Score
+                                    </h6>
+
+                                    <h2 className="text-primary">
+
+                                        {stats.averageScore
+                                            ? stats.averageScore.toFixed(1)
+                                            : "0.0"}
+
+                                        /10
+
+                                    </h2>
+
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
+
+                            <div className="card shadow-lg border-0 rounded-4 text-center h-100">
+
+                                <div className="card-body">
+
+                                    <div className="mb-2">
+
+                                        <span style={{ fontSize: "2rem" }}>
+                                            🏆
+                                        </span>
+
+                                    </div>
+
+                                    <h6 className="fw-bold">
+                                        Best Score
+                                    </h6>
+
+                                    <h2 className="text-success">
+
+                                        {stats.bestScore
+                                            ? stats.bestScore.toFixed(1)
+                                            : "0.0"}
+
+                                        /10
+
+                                    </h2>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </div>
+                )}
+
+                {stats && (
+
+                    <div className="card shadow-lg border-0 rounded-4 mb-4">
+
+                        <div className="card-body">
+
+                            <h5 className="mb-3">
+                                📈 Interview Progress
+                            </h5>
+
+                            <div className="progress" style={{ height: "25px" }}>
+
+                                <div
+                                    className="progress-bar bg-success"
+                                    role="progressbar"
+                                    style={{
+                                        width: `${stats.totalInterviews > 0
+                                            ? (stats.completedInterviews / stats.totalInterviews) * 100
+                                            : 0
+                                            }%`
+                                    }}
+                                >
+
+                                    {stats.totalInterviews > 0
+                                        ? Math.round(
+                                            (stats.completedInterviews / stats.totalInterviews) * 100
+                                        )
+                                        : 0
+                                    }%
+
+                                </div>
+
+                            </div>
+
+                            <p className="mt-3 mb-0 text-muted">
+
+                                {stats.completedInterviews} of {stats.totalInterviews} interviews completed
+
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                )}
+
+                {stats && (
+
+                    <div className="card shadow-lg border-0 rounded-4 mb-4">
+
+                        <div className="card-body text-center">
+
+                            <h5 className="mb-3">
+                                🎯 Performance
+                            </h5>
+
+                            {
+
+                                stats.averageScore >= 8 ?
+
+                                    (
+
+                                        <span className="badge bg-success fs-6 p-3">
+
+                                            🟢 Excellent Performance
+
+                                        </span>
+
+                                    )
+
+                                    :
+
+                                    stats.averageScore >= 6 ?
+
+                                        (
+
+                                            <span className="badge bg-warning text-dark fs-6 p-3">
+
+                                                🟡 Good Performance
+
+                                            </span>
+
+                                        )
+
+                                        :
+
+                                        (
+
+                                            <span className="badge bg-danger fs-6 p-3">
+
+                                                🔴 Needs Improvement
+
+                                            </span>
+
+                                        )
+
+                            }
+
+                        </div>
+
+                    </div>
+
+                )}
+                <div className="card shadow-lg border-0 rounded-4 mb-4">
+
+                    <div className="card-body">
+
+                        <h5 className="mb-3">
+                            🕒 Recent Activity
+                        </h5>
+
+                        {
+
+                            interviews.length === 0 ?
+
+                                (
+
+                                    <p className="text-muted">
+                                        No recent interviews.
+                                    </p>
+
+                                )
+
+                                :
+
+                                (
+
+                                    interviews
+                                        .slice(0, 3)
+                                        .map((interview) => (
+
+                                            <div
+                                                key={interview.id}
+                                                className="border-bottom pb-2 mb-2"
+                                            >
+
+                                                <strong>
+
+                                                    {interview.jobRole}
+
+                                                </strong>
+
+                                                <br />
+
+                                                <small className="text-muted">
+
+                                                    {interview.experienceLevel}
+
+                                                    {" • "}
+
+                                                    {new Date(
+                                                        interview.createdAt
+                                                    ).toLocaleString()}
+
+                                                </small>
+
+                                            </div>
+
+                                        ))
+
+                                )
+
+                        }
+
+                    </div>
+
+                </div>
+
+
+
+
+                <div className="d-flex justify-content-between align-items-center mb-4">
+                    <div className="row mb-4">
+
+                        <div className="col-md-5">
+
+                            <input
+                                type="text"
+                                className="form-control"
+                                placeholder="🔍 Search by Job Role..."
+                                value={searchTerm}
+                                onChange={(e) => {
+                                    setSearchTerm(e.target.value);
+                                    setCurrentPage(1);
+                                }}
+                            />
+
+                        </div>
+
+                        <div className="col-md-3">
+
+                            <select
+                                className="form-select"
+                                value={statusFilter}
+                                onChange={(e) => {
+                                    setStatusFilter(e.target.value);
+                                    setCurrentPage(1);
+                                }}
+                            >
+
+                                <option value="All">All Interviews</option>
+
+                                <option value="Completed">Completed</option>
+
+                                <option value="Pending">Pending</option>
+
+                            </select>
+
+                        </div>
+                        <div className="col-md-3">
+
+                            <select
+                                className="form-select"
+                                value={sortOrder}
+                                onChange={(e) => {
+                                    setSortOrder(e.target.value);
+                                    setCurrentPage(1);
+                                }}
+                            >
+
+                                <option value="Newest">Newest First</option>
+                                <option value="Oldest">Oldest First</option>
+
+                            </select>
+
+                        </div>
+                        <div className="col-md-1 d-grid">
+
+                            <button
+                                className="btn btn-secondary"
+                                onClick={() => {
+                                    setSearchTerm("");
+                                    setStatusFilter("All");
+                                    setSortOrder("Newest");
+                                    setCurrentPage(1);
+                                }}
+                            >
+                                Reset
+                            </button>
+
+                        </div>
+                    </div>
+
+                    <div>
+
+                        <h2 className="fw-bold">
+                            Dashboard
+                        </h2>
+
+                        <p className="text-muted">
+                            Manage your interviews
+                        </p>
+
+                    </div>
+
+                    <div>
+
+                        <button
+                            className="btn btn-success me-2"
+                            onClick={() => navigate("/create")}
+                        >
+                            ➕ Create Interview
+                        </button>
+
+                        <button
+                            className="btn btn-primary"
+                            onClick={() => {
+                                fetchInterviews();
+                                fetchDashboardStats();
+                            }}
+                        >
+                            🔄 Refresh
+                        </button>
+
+                    </div>
+
+                </div>
+
+                <p className="text-muted mb-3">
+
+                    Showing <strong>{filteredInterviews.length}</strong> of{" "}
+                    <strong>{interviews.length}</strong> interviews
+
+                </p>
+
+                {
+                    filteredInterviews.length === 0 ?
+
+                        (
+
+                            <div className="alert alert-warning text-center">
+
+                                <h4>🔍 No Interviews Found</h4>
+
+                                <p>
+                                    Try changing your search or filter.
+                                </p>
+
+                            </div>
+
+                        )
+
+                        :
+
+                        (
+
+                            currentInterviews
+
+                                .map((interview) => (
+
+                                    <div
+                                        key={interview.id}
+                                        className="card shadow border-0 rounded-4 mb-4 interview-card"
+                                    >
+
+                                        <div className="card-body p-4">
+
+                                            <h4 className="fw-bold text-primary">
+                                                {interview.jobRole}
+                                            </h4>
+
+                                            <p className="mb-2 text-muted">
+
+                                                💼 <strong>Experience:</strong> {interview.experienceLevel}
+
+                                            </p>
+                                            <p className="mb-3">
+
+                                                <strong>Status:</strong>{" "}
+
+                                                {interview.completed ? (
+
+                                                    <span className="badge bg-success rounded-pill px-3 py-2">
+
+                                                        ✅ Completed
+
+                                                    </span>
+
+                                                ) : (
+
+                                                    <span className="badge bg-warning text-dark rounded-pill px-3 py-2">
+
+                                                        ⏳ Pending
+
+                                                    </span>
+
+                                                )}
+
+                                            </p>
+                                            <p className="text-muted">
+                                                📅 <strong>Created:</strong> {" "}
+                                                {new Date(interview.createdAt).toLocaleString()}
+                                            </p>
+
+                                            <button
+                                                className="btn btn-primary btn-sm me-2"
+                                                onClick={() => navigate(`/interview/${interview.id}`)}
+                                            >
+                                                👁 View
+                                            </button>
+
+                                            <button
+                                                className="btn btn-success btn-sm me-2"
+                                                onClick={() => navigate(`/report/${interview.id}`)}
+                                            >
+                                                📄 Report
+                                            </button>
+
+                                            <button
+                                                className="btn btn-warning btn-sm me-2"
+                                                onClick={() => navigate(`/edit/${interview.id}`)}
+                                            >
+                                                ✏ Edit
+                                            </button>
+
+                                            <button
+                                                className="btn btn-danger"
+                                                onClick={() => handleDelete(interview.id)}
+                                                disabled={deletingId === interview.id}
+                                            >
+                                                {deletingId === interview.id ? (
+                                                    <>
+                                                        <span
+                                                            className="spinner-border spinner-border-sm me-2"
+                                                            role="status"
+                                                        ></span>
+                                                        Deleting...
+                                                    </>
+                                                ) : (
+                                                    "🗑 Delete"
+                                                )}
+                                            </button>
+
+
+                                        </div>
+
+
+                                    </div>
+
+                                ))
+
+                        )
+                }
+
+                {totalPages > 1 && (
+
+                    <div className="d-flex justify-content-center mt-4">
+
+                        <button
+                            className="btn btn-outline-primary me-2"
+                            disabled={currentPage === 1}
+                            onClick={() => setCurrentPage(currentPage - 1)}
+                        >
+                            Previous
+                        </button>
+
+                        {[...Array(totalPages)].map((_, index) => (
+
+                            <button
+                                key={index}
+                                className={
+                                    currentPage === index + 1
+                                        ? "btn btn-primary me-2"
+                                        : "btn btn-outline-primary me-2"
+                                }
+                                onClick={() => setCurrentPage(index + 1)}
+                            >
+                                {index + 1}
+                            </button>
+
+                        ))}
+
+                        <button
+                            className="btn btn-outline-primary"
+                            disabled={currentPage === totalPages}
+                            onClick={() => setCurrentPage(currentPage + 1)}
+                        >
+                            Next
+                        </button>
+
+                    </div>
+
+                )}
+
+            </div>
+
+        </>
+    );
 }
 
 export default Dashboard;
