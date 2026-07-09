@@ -4,7 +4,16 @@ import Navbar from "../component/Navbar";
 import { deleteInterview } from "../services/InterviewService";
 import { useNavigate } from "react-router-dom";
 import { getDashboardStats } from "../services/interviewService";
+import { Doughnut } from "react-chartjs-2";
+import {
+    Chart as ChartJS,
+    ArcElement,
+    Tooltip,
+    Legend,
+} from "chart.js";
 
+
+ChartJS.register(ArcElement, Tooltip, Legend);
 function Dashboard() {
 
     const [interviews, setInterviews] = useState([]);
@@ -48,6 +57,46 @@ function Dashboard() {
         }
 
     };
+    console.log(interviews);
+    interviews.forEach((interview) => {
+        console.log(interview);
+    });
+    const excellent = interviews.filter(
+        interview => interview.averageScore >= 8
+    ).length;
+
+    const good = interviews.filter(
+        interview =>
+            interview.averageScore >= 6 &&
+            interview.averageScore < 8
+    ).length;
+
+    const poor = interviews.filter(
+        interview => interview.averageScore < 6
+    ).length;
+
+    const chartData = {
+        labels: [
+            "Excellent",
+            "Good",
+            "Needs Improvement"
+        ],
+        datasets: [
+            {
+                data: [
+                    excellent,
+                    good,
+                    poor
+                ],
+                backgroundColor: [
+                    "#198754",
+                    "#ffc107",
+                    "#dc3545"
+                ],
+                borderWidth: 2
+            }
+        ]
+    };
 
     const fetchDashboardStats = async () => {
 
@@ -63,6 +112,24 @@ function Dashboard() {
 
         }
 
+    };
+
+    const difficultyData = {
+        labels: ["Easy", "Medium", "Hard"],
+        datasets: [
+            {
+                data: [
+                    interviews.filter(i => i.difficulty === "Easy").length,
+                    interviews.filter(i => i.difficulty === "Medium").length,
+                    interviews.filter(i => i.difficulty === "Hard").length,
+                ],
+                backgroundColor: [
+                    "#198754",
+                    "#ffc107",
+                    "#dc3545",
+                ],
+            },
+        ],
     };
 
     const handleDelete = async (id) => {
@@ -168,8 +235,77 @@ function Dashboard() {
         filteredInterviews.length / interviewsPerPage
     );
 
+    // Calculate Interview Streak
+    const sortedInterviews = [...interviews].sort(
+        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
+
+    let streak = 0;
+    let previousDate = null;
+
+    sortedInterviews.forEach((interview) => {
+        const currentDate = new Date(interview.createdAt)
+            .toISOString()
+            .split("T")[0];
+
+        if (!previousDate) {
+            streak++;
+            previousDate = currentDate;
+        } else {
+            const diff =
+                (new Date(previousDate) - new Date(currentDate)) /
+                (1000 * 60 * 60 * 24);
+
+            if (diff === 1) {
+                streak++;
+                previousDate = currentDate;
+            }
+        }
+    });
+    let streakMessage = "";
+
+    if (streak === 0) {
+        streakMessage = "😊 Take your first interview today!";
+    } else if (streak < 3) {
+        streakMessage = "🚀 Great Start! Keep Going!";
+    } else if (streak < 7) {
+        streakMessage = "💪 Keep Practicing!";
+    } else {
+        streakMessage = "🔥 Amazing Interview Streak!";
+    }
+
+    const avgScore = stats?.averageScore || 0;
+
+    let performanceBadge = "";
+    let performanceColor = "";
+
+    if (avgScore >= 9) {
+        performanceBadge = "🏆 Expert";
+        performanceColor = "success";
+    } else if (avgScore >= 8) {
+        performanceBadge = "🥇 Advanced";
+        performanceColor = "primary";
+    } else if (avgScore >= 7) {
+        performanceBadge = "🥈 Intermediate";
+        performanceColor = "warning";
+    } else if (avgScore >= 6) {
+        performanceBadge = "🥉 Beginner";
+        performanceColor = "secondary";
+    } else {
+        performanceBadge = "📚 Keep Practicing";
+        performanceColor = "danger";
+    }
+
+    const scores = interviews
+        .map(interview => interview.averageScore || 0);
+
+    const highestScore =
+        scores.length > 0 ? Math.max(...scores) : 0;
+
+    const lowestScore =
+        scores.length > 0 ? Math.min(...scores) : 0;
     return (
-        <>
+        <div>
             <Navbar />
             {message && (
 
@@ -183,11 +319,55 @@ function Dashboard() {
 
 
             <div className="container mt-4">
+                <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+                    <div className="mb-3 mb-md-0">
 
+                        <h1 className="fw-bold mb-1">
+                            Dashboard
+                        </h1>
+
+                        <p className="text-muted mb-0">
+                            Manage your interviews
+                        </p>
+                    </div>
+
+                    <div className="d-flex flex-wrap gap-2">
+
+                        <button
+                            className="btn btn-success"
+                            onClick={() => navigate("/create")}
+                        >
+                            ➕ Create Interview
+                        </button>
+
+                        <button
+                            className="btn btn-primary"
+                            onClick={fetchInterviews}
+                        >
+                            🔄 Refresh
+                        </button>
+
+                    </div>
+
+                </div>
                 {stats && (
 
                     <div className="row g-3 mb-4 justify-content-center">
+                        <div className="d-flex justify-content-between align-items-center mb-4">
 
+                            <div>
+
+                                <h2 className="fw-bold">
+                                    Welcome Back 👋
+                                </h2>
+
+                                <p className="text-muted mb-0">
+                                    Here's your interview performance overview.
+                                </p>
+
+                            </div>
+
+                        </div>
                         <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
 
                             <div className="card shadow-lg border-0 rounded-4 text-center h-100">
@@ -298,6 +478,10 @@ function Dashboard() {
 
                                     </h2>
 
+                                    <span className={`badge bg-${performanceColor} fs-6 mt-2`}>
+                                        {performanceBadge}
+                                    </span>
+
                                 </div>
 
                             </div>
@@ -335,6 +519,214 @@ function Dashboard() {
 
                             </div>
 
+                        </div>
+
+                        <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
+
+                            <div className="card shadow-lg border-0 rounded-4 text-center h-100">
+
+                                <div className="card-body">
+
+                                    <div className="mb-2">
+
+                                        <span style={{ fontSize: "2rem" }}>
+                                            🔥
+                                        </span>
+
+                                    </div>
+
+                                    <h6 className="fw-bold">
+                                        Interview Streak
+                                    </h6>
+
+                                    <h2 className="text-danger">
+                                        {streak}
+                                    </h2>
+
+                                    <small className="text-muted">
+                                        Consecutive Days
+                                    </small>
+
+                                    <p
+                                        className="mt-2 mb-0"
+                                        style={{
+                                            fontSize: "0.85rem",
+                                            color: "#0d6efd",
+                                            fontWeight: "600",
+                                        }}
+                                    >
+                                        {streakMessage}
+                                    </p>
+
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <div className="card shadow-lg border-0 rounded-4 mt-4 p-4">
+
+                            <div className="d-flex justify-content-between align-items-center mb-4">
+
+                                <h4 className="mb-0">
+                                    📊 Performance Distribution
+                                </h4>
+
+                                <span className="badge bg-primary fs-6">
+                                    {interviews.length} Interviews
+                                </span>
+
+                            </div>
+
+                            <div
+                                className="d-flex justify-content-center"
+                                style={{
+                                    width: "320px",
+                                    margin: "0 auto",
+                                }}
+                            >
+                                <Doughnut
+                                    data={{
+                                        labels: [
+                                            "Excellent (8-10)",
+                                            "Good (5-7.9)",
+                                            "Needs Improvement (<5)",
+                                        ],
+                                        datasets: [
+                                            {
+                                                data: [
+                                                    excellent,
+                                                    good,
+                                                    poor,
+                                                ],
+                                                backgroundColor: [
+                                                    "#22c55e",
+                                                    "#facc15",
+                                                    "#ef4444",
+                                                ],
+                                                borderWidth: 1,
+                                            },
+                                        ],
+                                    }}
+                                />
+                            </div>
+
+                            <div className="mt-4">
+
+                                <div className="d-flex justify-content-between align-items-center mb-2">
+
+                                    <span className="text-success fw-bold">
+                                        🟢 Excellent
+                                    </span>
+
+                                    <span className="badge bg-success">
+                                        {excellent}
+                                    </span>
+
+                                </div>
+
+                                <div className="d-flex justify-content-between align-items-center mb-2">
+
+                                    <span className="text-warning fw-bold">
+                                        🟡 Good
+                                    </span>
+
+                                    <span className="badge bg-warning text-dark">
+                                        {good}
+                                    </span>
+
+                                </div>
+
+                                <div className="d-flex justify-content-between align-items-center">
+
+                                    <span className="text-danger fw-bold">
+                                        🔴 Needs Improvement
+                                    </span>
+
+                                    <span className="badge bg-danger">
+                                        {poor}
+                                    </span>
+
+                                </div>
+
+                            </div>
+                            <div className="text-center mt-4">
+
+                                <h6 className="text-muted">
+                                    Overall Average Score
+                                </h6>
+
+                                <h3 className="fw-bold text-primary">
+                                    {stats?.averageScore?.toFixed(1) || "0.0"} / 10
+                                </h3>
+
+                            </div>
+                            <div className="card shadow-lg border-0 rounded-4 mt-4 p-4">
+
+                                <h4 className="mb-4">
+                                    📌 Performance Insights
+                                </h4>
+
+                                <div className="row">
+
+                                    <div className="col-md-4">
+
+                                        <div className="card text-center border-success">
+
+                                            <div className="card-body">
+
+                                                <h6>🏆 Best Score</h6>
+
+                                                <h3 className="text-success">
+                                                    {highestScore.toFixed(1)}
+                                                </h3>
+
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                    <div className="col-md-4">
+
+                                        <div className="card text-center border-danger">
+
+                                            <div className="card-body">
+
+                                                <h6>📉 Lowest Score</h6>
+
+                                                <h3 className="text-danger">
+                                                    {lowestScore.toFixed(1)}
+                                                </h3>
+
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                    <div className="col-md-4">
+
+                                        <div className="card text-center border-primary">
+
+                                            <div className="card-body">
+
+                                                <h6>📊 Total Interviews</h6>
+
+                                                <h3 className="text-primary">
+                                                    {interviews.length}
+                                                </h3>
+
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
                         </div>
                     </div>
                 )}
@@ -482,7 +874,9 @@ function Dashboard() {
                                                 </strong>
 
                                                 <br />
-
+                                                <h6 className="mb-1">
+                                                    ✔ {interview.jobRole}
+                                                </h6>
                                                 <small className="text-muted">
 
                                                     {interview.experienceLevel}
@@ -510,282 +904,248 @@ function Dashboard() {
 
 
 
-                <div className="d-flex justify-content-between align-items-center mb-4">
-                    <div className="row mb-4">
 
-                        <div className="col-md-5">
+                <div className="row g-3 mb-5">
 
-                            <input
-                                type="text"
-                                className="form-control"
-                                placeholder="🔍 Search by Job Role..."
-                                value={searchTerm}
-                                onChange={(e) => {
-                                    setSearchTerm(e.target.value);
-                                    setCurrentPage(1);
-                                }}
-                            />
+                    <div className="col-lg-5 col-md-6">
 
-                        </div>
-
-                        <div className="col-md-3">
-
-                            <select
-                                className="form-select"
-                                value={statusFilter}
-                                onChange={(e) => {
-                                    setStatusFilter(e.target.value);
-                                    setCurrentPage(1);
-                                }}
-                            >
-
-                                <option value="All">All Interviews</option>
-
-                                <option value="Completed">Completed</option>
-
-                                <option value="Pending">Pending</option>
-
-                            </select>
-
-                        </div>
-                        <div className="col-md-3">
-
-                            <select
-                                className="form-select"
-                                value={sortOrder}
-                                onChange={(e) => {
-                                    setSortOrder(e.target.value);
-                                    setCurrentPage(1);
-                                }}
-                            >
-
-                                <option value="Newest">Newest First</option>
-                                <option value="Oldest">Oldest First</option>
-
-                            </select>
-
-                        </div>
-                        <div className="col-md-1 d-grid">
-
-                            <button
-                                className="btn btn-secondary"
-                                onClick={() => {
-                                    setSearchTerm("");
-                                    setStatusFilter("All");
-                                    setSortOrder("Newest");
-                                    setCurrentPage(1);
-                                }}
-                            >
-                                Reset
-                            </button>
-
-                        </div>
-                    </div>
-
-                    <div>
-
-                        <h2 className="fw-bold">
-                            Dashboard
-                        </h2>
-
-                        <p className="text-muted">
-                            Manage your interviews
-                        </p>
+                        <input
+                            type="text"
+                            className="form-control"
+                            placeholder="🔍 Search by Job Role..."
+                            value={searchTerm}
+                            onChange={(e) => {
+                                setSearchTerm(e.target.value);
+                                setCurrentPage(1);
+                            }}
+                        />
 
                     </div>
 
-                    <div>
+                    <div className="col-lg-2 col-md-3">
 
-                        <button
-                            className="btn btn-success me-2"
-                            onClick={() => navigate("/create")}
-                        >
-                            ➕ Create Interview
-                        </button>
-
-                        <button
-                            className="btn btn-primary"
-                            onClick={() => {
-                                fetchInterviews();
-                                fetchDashboardStats();
+                        <select
+                            className="form-select"
+                            value={statusFilter}
+                            onChange={(e) => {
+                                setStatusFilter(e.target.value);
+                                setCurrentPage(1);
                             }}
                         >
-                            🔄 Refresh
+
+                            <option value="All">All Interviews</option>
+
+                            <option value="Completed">Completed</option>
+
+                            <option value="Pending">Pending</option>
+
+                        </select>
+
+                    </div>
+                    <div className="col-lg-2 col-md-3">
+
+                        <select
+                            className="form-select"
+                            value={sortOrder}
+                            onChange={(e) => {
+                                setSortOrder(e.target.value);
+                                setCurrentPage(1);
+                            }}
+                        >
+
+                            <option value="Newest">Newest First</option>
+                            <option value="Oldest">Oldest First</option>
+
+                        </select>
+
+                    </div>
+                    <div className="col-lg-2 col-md-3 d-grid">
+
+                        <button
+                            className="btn btn-secondary"
+                            onClick={() => {
+                                setSearchTerm("");
+                                setStatusFilter("All");
+                                setSortOrder("Newest");
+                                setCurrentPage(1);
+                            }}
+                        >
+                            Reset
                         </button>
 
                     </div>
-
                 </div>
+            </div>
 
-                <p className="text-muted mb-3">
+            <p className="text-muted mb-3">
 
-                    Showing <strong>{filteredInterviews.length}</strong> of{" "}
-                    <strong>{interviews.length}</strong> interviews
+                Showing <strong>{filteredInterviews.length}</strong> of{" "}
+                <strong>{interviews.length}</strong> interviews
 
-                </p>
+            </p>
 
-                {
-                    filteredInterviews.length === 0 ?
+            {
+                filteredInterviews.length === 0 ?
 
-                        (
+                    (
 
-                            <div className="alert alert-warning text-center">
+                        <div className="alert alert-warning text-center">
 
-                                <h4>🔍 No Interviews Found</h4>
+                            <h4>🔍 No Interviews Found</h4>
 
-                                <p>
-                                    Try changing your search or filter.
-                                </p>
+                            <p>
+                                Try changing your search or filter.
+                            </p>
 
-                            </div>
+                        </div>
 
-                        )
+                    )
 
-                        :
+                    :
 
-                        (
+                    (
 
-                            currentInterviews
+                        currentInterviews
 
-                                .map((interview) => (
+                            .map((interview) => (
 
-                                    <div
-                                        key={interview.id}
-                                        className="card shadow border-0 rounded-4 mb-4 interview-card"
-                                    >
+                                <div
+                                    key={interview.id}
+                                    className="card shadow border-0 rounded-4 mb-4 interview-card"
+                                >
 
-                                        <div className="card-body p-4">
+                                    <div className="card-body p-4">
 
-                                            <h4 className="fw-bold text-primary">
-                                                {interview.jobRole}
-                                            </h4>
+                                        <h4 className="fw-bold text-primary">
+                                            {interview.jobRole}
+                                        </h4>
 
-                                            <p className="mb-2 text-muted">
+                                        <p className="mb-2 text-muted">
 
-                                                💼 <strong>Experience:</strong> {interview.experienceLevel}
+                                            💼 <strong>Experience:</strong> {interview.experienceLevel}
 
-                                            </p>
-                                            <p className="mb-3">
+                                        </p>
+                                        <p className="mb-3">
 
-                                                <strong>Status:</strong>{" "}
+                                            <strong>Status:</strong>{" "}
 
-                                                {interview.completed ? (
+                                            {interview.completed ? (
 
-                                                    <span className="badge bg-success rounded-pill px-3 py-2">
+                                                <span className="badge bg-success rounded-pill px-3 py-2">
 
-                                                        ✅ Completed
+                                                    ✅ Completed
 
-                                                    </span>
+                                                </span>
 
-                                                ) : (
+                                            ) : (
 
-                                                    <span className="badge bg-warning text-dark rounded-pill px-3 py-2">
+                                                <span className="badge bg-warning text-dark rounded-pill px-3 py-2">
 
-                                                        ⏳ Pending
+                                                    ⏳ Pending
 
-                                                    </span>
+                                                </span>
 
-                                                )}
+                                            )}
 
-                                            </p>
-                                            <p className="text-muted">
-                                                📅 <strong>Created:</strong> {" "}
-                                                {new Date(interview.createdAt).toLocaleString()}
-                                            </p>
+                                        </p>
+                                        <p className="text-muted">
+                                            📅 <strong>Created:</strong> {" "}
+                                            {new Date(interview.createdAt).toLocaleString()}
+                                        </p>
 
-                                            <button
-                                                className="btn btn-primary btn-sm me-2"
-                                                onClick={() => navigate(`/interview/${interview.id}`)}
-                                            >
-                                                👁 View
-                                            </button>
+                                        <button
+                                            className="btn btn-primary btn-sm me-2"
+                                            onClick={() => navigate(`/interview/${interview.id}`)}
+                                        >
+                                            👁 View
+                                        </button>
 
-                                            <button
-                                                className="btn btn-success btn-sm me-2"
-                                                onClick={() => navigate(`/report/${interview.id}`)}
-                                            >
-                                                📄 Report
-                                            </button>
+                                        <button
+                                            className="btn btn-success btn-sm me-2"
+                                            onClick={() => navigate(`/report/${interview.id}`)}
+                                        >
+                                            📄 Report
+                                        </button>
 
-                                            <button
-                                                className="btn btn-warning btn-sm me-2"
-                                                onClick={() => navigate(`/edit/${interview.id}`)}
-                                            >
-                                                ✏ Edit
-                                            </button>
+                                        <button
+                                            className="btn btn-warning btn-sm me-2"
+                                            onClick={() => navigate(`/edit/${interview.id}`)}
+                                        >
+                                            ✏ Edit
+                                        </button>
 
-                                            <button
-                                                className="btn btn-danger"
-                                                onClick={() => handleDelete(interview.id)}
-                                                disabled={deletingId === interview.id}
-                                            >
-                                                {deletingId === interview.id ? (
-                                                    <>
-                                                        <span
-                                                            className="spinner-border spinner-border-sm me-2"
-                                                            role="status"
-                                                        ></span>
-                                                        Deleting...
-                                                    </>
-                                                ) : (
-                                                    "🗑 Delete"
-                                                )}
-                                            </button>
-
-
-                                        </div>
+                                        <button
+                                            className="btn btn-danger"
+                                            onClick={() => handleDelete(interview.id)}
+                                            disabled={deletingId === interview.id}
+                                        >
+                                            {deletingId === interview.id ? (
+                                                <>
+                                                    <span
+                                                        className="spinner-border spinner-border-sm me-2"
+                                                        role="status"
+                                                    ></span>
+                                                    Deleting...
+                                                </>
+                                            ) : (
+                                                "🗑 Delete"
+                                            )}
+                                        </button>
 
 
                                     </div>
 
-                                ))
 
-                        )
-                }
+                                </div>
 
-                {totalPages > 1 && (
+                            ))
 
-                    <div className="d-flex justify-content-center mt-4">
+                    )
+            }
 
-                        <button
-                            className="btn btn-outline-primary me-2"
-                            disabled={currentPage === 1}
-                            onClick={() => setCurrentPage(currentPage - 1)}
-                        >
-                            Previous
-                        </button>
+            {totalPages > 1 && (
 
-                        {[...Array(totalPages)].map((_, index) => (
+                <div className="d-flex justify-content-center mt-4">
 
-                            <button
-                                key={index}
-                                className={
-                                    currentPage === index + 1
-                                        ? "btn btn-primary me-2"
-                                        : "btn btn-outline-primary me-2"
-                                }
-                                onClick={() => setCurrentPage(index + 1)}
-                            >
-                                {index + 1}
-                            </button>
+                    <button
+                        className="btn btn-outline-primary me-2"
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage(currentPage - 1)}
+                    >
+                        Previous
+                    </button>
 
-                        ))}
+                    {[...Array(totalPages)].map((_, index) => (
 
                         <button
-                            className="btn btn-outline-primary"
-                            disabled={currentPage === totalPages}
-                            onClick={() => setCurrentPage(currentPage + 1)}
+                            key={index}
+                            className={
+                                currentPage === index + 1
+                                    ? "btn btn-primary me-2"
+                                    : "btn btn-outline-primary me-2"
+                            }
+                            onClick={() => setCurrentPage(index + 1)}
                         >
-                            Next
+                            {index + 1}
                         </button>
 
-                    </div>
+                    ))}
 
-                )}
+                    <button
+                        className="btn btn-outline-primary"
+                        disabled={currentPage === totalPages}
+                        onClick={() => setCurrentPage(currentPage + 1)}
+                    >
+                        Next
+                    </button>
 
-            </div>
+                </div>
 
-        </>
+            )}
+
+
+
+        </div >
     );
 }
 

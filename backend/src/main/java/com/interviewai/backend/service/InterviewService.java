@@ -80,6 +80,38 @@ public class InterviewService {
             response.setExperienceLevel(interview.getExperienceLevel());
             response.setCreatedAt(interview.getCreatedAt().toString());
             response.setCompleted(interview.getCompleted());
+            System.out.println("Interview ID: " + interview.getId());
+
+            if (interview.getQuestions() == null) {
+                System.out.println("Questions = NULL");
+            } else {
+                System.out.println("Question Count = " + interview.getQuestions().size());
+
+                interview.getQuestions().forEach(q ->
+                        System.out.println("Score = " + q.getScore())
+                );
+            }
+            double averageScore = 0.0;
+
+            if (interview.getQuestions() != null && !interview.getQuestions().isEmpty()) {
+
+                averageScore = interview.getQuestions()
+                        .stream()
+                        .mapToDouble(question -> {
+                            try {
+                                String scoreText = question.getScore()
+                                        .replace("/10", "")
+                                        .trim();
+                                return Double.parseDouble(scoreText);
+                            } catch (Exception e) {
+                                return 0.0;
+                            }
+                        })
+                        .average()
+                        .orElse(0.0);
+            }
+
+            response.setAverageScore(averageScore);
             responseList.add(response);
         }
 

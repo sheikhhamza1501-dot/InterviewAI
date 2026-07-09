@@ -7,6 +7,7 @@ public class InterviewResponse {
         private String experienceLevel;
         private String createdAt;
     private Boolean completed;
+    private Double averageScore;
         public InterviewResponse() {
         }
 
@@ -45,8 +46,14 @@ public class InterviewResponse {
     public Boolean getCompleted() {
         return completed;
     }
+    public Double getAverageScore() {
+        return averageScore;
+    }
 
     public void setCompleted(Boolean completed) {
         this.completed = completed;
+    }
+    public void setAverageScore(Double averageScore) {
+        this.averageScore = averageScore;
     }
 }

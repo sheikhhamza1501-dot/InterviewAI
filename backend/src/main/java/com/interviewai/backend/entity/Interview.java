@@ -22,6 +22,7 @@ public class Interview {
 
     private Boolean completed = false;
 
+
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
@@ -79,5 +80,12 @@ public class Interview {
         this.completed = completed;
     }
 
+    public List<Question> getQuestions() {
+        return questions;
+    }
+
+    public void setQuestions(List<Question> questions) {
+        this.questions = questions;
+    }
 
 }
