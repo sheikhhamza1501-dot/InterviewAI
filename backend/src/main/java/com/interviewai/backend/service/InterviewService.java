@@ -15,7 +15,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import com.interviewai.backend.entity.User;
 import java.time.LocalDateTime;
 import com.interviewai.backend.dto.DashboardStatsResponse;
-
+import com.interviewai.backend.dto.ScoreTrendResponse;
 import com.interviewai.backend.entity.Question;
 import com.interviewai.backend.repository.QuestionRepository;
 
@@ -349,5 +349,72 @@ public class InterviewService {
         response.setBestScore(bestScore);
 
         return response;
+    }
+    public List<ScoreTrendResponse> getScoreTrend() {
+
+
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        String email = authentication.getName();
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        List<Interview> interviews = interviewRepository.findByUser(user);
+
+        List<ScoreTrendResponse> trend = new ArrayList<>();
+
+        for (Interview interview : interviews) {
+
+            if (!Boolean.TRUE.equals(interview.getCompleted())) {
+                continue;
+            }
+
+            double total = 0;
+            int count = 0;
+
+            if (interview.getQuestions() != null) {
+
+                for (Question question : interview.getQuestions()) {
+
+                    try {
+
+                        String scoreText = question.getScore()
+                                .replace("/10", "")
+                                .trim();
+
+                        total += Double.parseDouble(scoreText);
+
+                        count++;
+
+                    } catch (Exception e) {
+
+                        System.out.println("Invalid Score = " + question.getScore());
+
+                    }
+
+                }
+
+            }
+
+            double average = count == 0 ? 0 : total / count;
+
+            trend.add(
+
+                    new ScoreTrendResponse(
+
+                            interview.getCreatedAt().toLocalDate().toString(),
+
+                            average
+
+                    )
+
+            );
+
+        }
+
+        return trend;
+
     }
 }

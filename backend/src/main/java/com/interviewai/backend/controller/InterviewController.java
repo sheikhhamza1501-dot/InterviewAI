@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import com.interviewai.backend.dto.UpdateInterviewRequest;
 import com.interviewai.backend.dto.InterviewReportResponse;
 import com.interviewai.backend.dto.DashboardStatsResponse;
-
+import com.interviewai.backend.dto.ScoreTrendResponse;
 @RestController
 @RequestMapping("/api/interviews")
 public class InterviewController {
@@ -52,6 +52,12 @@ public class InterviewController {
     public DashboardStatsResponse getDashboardStats() {
 
         return interviewService.getDashboardStats();
+
+    }
+    @GetMapping("/dashboard/score-trend")
+    public List<ScoreTrendResponse> getScoreTrend() {
+
+        return interviewService.getScoreTrend();
 
     }
 }

@@ -4,16 +4,34 @@ import Navbar from "../component/Navbar";
 import { deleteInterview } from "../services/InterviewService";
 import { useNavigate } from "react-router-dom";
 import { getDashboardStats } from "../services/interviewService";
-import { Doughnut } from "react-chartjs-2";
+import axios from "axios";
+import jsPDF from "jspdf";
+import html2pdf from "html2pdf.js";
+import html2canvas from "html2canvas";
+import { useRef } from "react";
+import { Doughnut, Line } from "react-chartjs-2";
 import {
     Chart as ChartJS,
     ArcElement,
     Tooltip,
     Legend,
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    Title
 } from "chart.js";
 
 
-ChartJS.register(ArcElement, Tooltip, Legend);
+ChartJS.register(ArcElement, Tooltip, Legend,
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    Title,
+    Tooltip,
+    Legend
+);
 function Dashboard() {
 
     const [interviews, setInterviews] = useState([]);
@@ -27,12 +45,16 @@ function Dashboard() {
     const [messageType, setMessageType] = useState("");
     const [deletingId, setDeletingId] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
-
+    const [scoreTrend, setScoreTrend] = useState([]);
+    const [performanceHistory, setPerformanceHistory] = useState([]);
+    const dashboardRef = useRef(null);
     const interviewsPerPage = 5;
 
     useEffect(() => {
         fetchInterviews();
         fetchDashboardStats();
+        fetchScoreTrend();
+        fetchPerformanceHistory();
     }, []);
 
     const fetchInterviews = async () => {
@@ -57,6 +79,92 @@ function Dashboard() {
         }
 
     };
+    const fetchScoreTrend = async () => {
+
+        try {
+
+            const token = localStorage.getItem("token");
+
+            const response = await axios.get(
+
+                "http://localhost:8080/api/interviews/dashboard/score-trend",
+
+                {
+
+                    headers: {
+
+                        Authorization: `Bearer ${token}`
+
+                    }
+
+                }
+
+            );
+
+            setScoreTrend(response.data);
+
+        } catch (error) {
+
+            console.error(error);
+
+        }
+
+    };
+    const fetchPerformanceHistory = async () => {
+
+        try {
+
+            const token = localStorage.getItem("token");
+
+            const response = await axios.get(
+                "http://localhost:8080/api/interviews",
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            );
+
+            setPerformanceHistory(response.data);
+
+        } catch (error) {
+
+            console.error(error);
+
+        }
+
+    };
+
+const exportDashboardPDF = () => {
+
+    const element = dashboardRef.current;
+
+    const options = {
+        margin: [12,10,12,10],
+        filename: "InterviewAI_Dashboard.pdf",
+        image: {
+            type: "png",
+            quality: 1
+        },
+        html2canvas: {
+               scale: 1.5,
+    useCORS: true,
+    letterRendering: true,
+    scrollY: 0
+        },
+        jsPDF: {
+            unit: "mm",
+            format: "a4",
+            orientation: "portrait"
+        },
+        pagebreak: {
+            mode: ["avoid-all", "css", "legacy"]
+        }
+    };
+
+    html2pdf().set(options).from(element).save();
+
+};
     console.log(interviews);
     interviews.forEach((interview) => {
         console.log(interview);
@@ -97,6 +205,35 @@ function Dashboard() {
             }
         ]
     };
+    const lineChartData = {
+
+        labels: scoreTrend.map(item => item.date),
+
+        datasets: [
+
+            {
+
+                label: "Average Score",
+
+                data: scoreTrend.map(item => item.score),
+
+                borderColor: "#0d6efd",
+
+                backgroundColor: "rgba(13,110,253,0.2)",
+
+                fill: true,
+                tension: 0.4,
+
+                pointRadius: 6,
+
+                pointHoverRadius: 8
+
+            }
+
+        ]
+
+    };
+
 
     const fetchDashboardStats = async () => {
 
@@ -304,6 +441,9 @@ function Dashboard() {
 
     const lowestScore =
         scores.length > 0 ? Math.min(...scores) : 0;
+
+    console.log(scoreTrend);
+    console.log(lineChartData);
     return (
         <div>
             <Navbar />
@@ -317,8 +457,10 @@ function Dashboard() {
 
             )}
 
-
-            <div className="container mt-4">
+            <div
+                className="container mt-4"
+                ref={dashboardRef}
+            >
                 <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
                     <div className="mb-3 mb-md-0">
 
@@ -345,6 +487,12 @@ function Dashboard() {
                             onClick={fetchInterviews}
                         >
                             🔄 Refresh
+                        </button>
+                        <button
+                            className="btn btn-danger"
+                            onClick={exportDashboardPDF}
+                        >
+                            📄 Export Dashboard
                         </button>
 
                     </div>
@@ -611,114 +759,210 @@ function Dashboard() {
                                     }}
                                 />
                             </div>
+                        </div>
+                        <div className="card shadow-lg border-0 rounded-4 mt-4 p-4">
 
-                            <div className="mt-4">
+                            <h4 className="mb-4">
+                                📈 Score Trend
+                            </h4>
 
-                                <div className="d-flex justify-content-between align-items-center mb-2">
+                            <Line
+                                data={lineChartData}
+                                options={{
+                                    responsive: true,
+                                    scales: {
+                                        y: {
+                                            min: 0,
+                                            max: 10
+                                        }
+                                    }
+                                }}
+                            />
 
-                                    <span className="text-success fw-bold">
-                                        🟢 Excellent
-                                    </span>
+                        </div>
+                        <div className="card shadow-lg border-0 rounded-4 mt-4 p-4">
 
-                                    <span className="badge bg-success">
-                                        {excellent}
-                                    </span>
+                            <h4 className="mb-4">
+                                📋 Interview Performance History
+                            </h4>
 
-                                </div>
+                            <div className="table-responsive">
 
-                                <div className="d-flex justify-content-between align-items-center mb-2">
+                                <table className="table table-hover align-middle">
 
-                                    <span className="text-warning fw-bold">
-                                        🟡 Good
-                                    </span>
+                                    <thead className="table-dark">
 
-                                    <span className="badge bg-warning text-dark">
-                                        {good}
-                                    </span>
+                                        <tr>
 
-                                </div>
+                                            <th>Date</th>
 
-                                <div className="d-flex justify-content-between align-items-center">
+                                            <th>Job Role</th>
 
-                                    <span className="text-danger fw-bold">
-                                        🔴 Needs Improvement
-                                    </span>
+                                            <th>Average Score</th>
+                                            <th>Status</th>
 
-                                    <span className="badge bg-danger">
-                                        {poor}
-                                    </span>
+                                        </tr>
 
-                                </div>
+                                    </thead>
+
+                                    <tbody>
+
+                                        {performanceHistory.map((item) => (
+
+                                            <tr key={item.id}>
+
+                                                <td>
+                                                    {new Date(item.createdAt).toLocaleDateString()}
+                                                </td>
+
+                                                <td>
+                                                    {item.jobRole}
+                                                </td>
+                                                <td>
+
+                                                    ⭐ {item.averageScore?.toFixed(1) || "0.0"}
+
+                                                </td>
+
+                                                <td>
+
+                                                    {item.completed ? (
+
+                                                        <span className="badge bg-success">
+
+                                                            Completed
+
+                                                        </span>
+
+                                                    ) : (
+
+                                                        <span className="badge bg-warning text-dark">
+
+                                                            Pending
+
+                                                        </span>
+
+                                                    )}
+
+                                                </td>
+
+                                            </tr>
+
+                                        ))}
+
+                                    </tbody>
+
+                                </table>
 
                             </div>
-                            <div className="text-center mt-4">
 
-                                <h6 className="text-muted">
-                                    Overall Average Score
-                                </h6>
+                        </div>
 
-                                <h3 className="fw-bold text-primary">
-                                    {stats?.averageScore?.toFixed(1) || "0.0"} / 10
-                                </h3>
+                        <div className="mt-4">
+
+                            <div className="d-flex justify-content-between align-items-center mb-2">
+
+                                <span className="text-success fw-bold">
+                                    🟢 Excellent
+                                </span>
+
+                                <span className="badge bg-success">
+                                    {excellent}
+                                </span>
 
                             </div>
-                            <div className="card shadow-lg border-0 rounded-4 mt-4 p-4">
 
-                                <h4 className="mb-4">
-                                    📌 Performance Insights
-                                </h4>
+                            <div className="d-flex justify-content-between align-items-center mb-2">
 
-                                <div className="row">
+                                <span className="text-warning fw-bold">
+                                    🟡 Good
+                                </span>
 
-                                    <div className="col-md-4">
+                                <span className="badge bg-warning text-dark">
+                                    {good}
+                                </span>
 
-                                        <div className="card text-center border-success">
+                            </div>
 
-                                            <div className="card-body">
+                            <div className="d-flex justify-content-between align-items-center">
 
-                                                <h6>🏆 Best Score</h6>
+                                <span className="text-danger fw-bold">
+                                    🔴 Needs Improvement
+                                </span>
 
-                                                <h3 className="text-success">
-                                                    {highestScore.toFixed(1)}
-                                                </h3>
+                                <span className="badge bg-danger">
+                                    {poor}
+                                </span>
 
-                                            </div>
+                            </div>
+
+                        </div>
+                        <div className="text-center mt-4">
+
+                            <h6 className="text-muted">
+                                Overall Average Score
+                            </h6>
+
+                            <h3 className="fw-bold text-primary">
+                                {stats?.averageScore?.toFixed(1) || "0.0"} / 10
+                            </h3>
+
+                        </div>
+                        <div className="card shadow-lg border-0 rounded-4 mt-4 p-4">
+
+                            <h4 className="mb-4">
+                                📌 Performance Insights
+                            </h4>
+
+                            <div className="row">
+
+                                <div className="col-md-4">
+
+                                    <div className="card text-center border-success">
+
+                                        <div className="card-body">
+
+                                            <h6>🏆 Best Score</h6>
+
+                                            <h3 className="text-success">
+                                                {highestScore.toFixed(1)}
+                                            </h3>
 
                                         </div>
 
                                     </div>
 
-                                    <div className="col-md-4">
+                                </div>
 
-                                        <div className="card text-center border-danger">
+                                <div className="col-md-4">
 
-                                            <div className="card-body">
+                                    <div className="card text-center border-danger">
 
-                                                <h6>📉 Lowest Score</h6>
+                                        <div className="card-body">
 
-                                                <h3 className="text-danger">
-                                                    {lowestScore.toFixed(1)}
-                                                </h3>
+                                            <h6>📉 Lowest Score</h6>
 
-                                            </div>
+                                            <h3 className="text-danger">
+                                                {lowestScore.toFixed(1)}
+                                            </h3>
 
                                         </div>
 
                                     </div>
 
-                                    <div className="col-md-4">
+                                </div>
 
-                                        <div className="card text-center border-primary">
+                                <div className="col-md-4">
 
-                                            <div className="card-body">
+                                    <div className="card text-center border-primary">
 
-                                                <h6>📊 Total Interviews</h6>
+                                        <div className="card-body">
 
-                                                <h3 className="text-primary">
-                                                    {interviews.length}
-                                                </h3>
+                                            <h6>📊 Total Interviews</h6>
 
-                                            </div>
+                                            <h3 className="text-primary">
+                                                {interviews.length}
+                                            </h3>
 
                                         </div>
 
@@ -727,8 +971,10 @@ function Dashboard() {
                                 </div>
 
                             </div>
+
                         </div>
                     </div>
+
                 )}
 
                 {stats && (
@@ -975,177 +1221,181 @@ function Dashboard() {
 
                     </div>
                 </div>
-            </div>
 
-            <p className="text-muted mb-3">
 
-                Showing <strong>{filteredInterviews.length}</strong> of{" "}
-                <strong>{interviews.length}</strong> interviews
+                <p className="text-muted mb-3">
 
-            </p>
+                    Showing <strong>{filteredInterviews.length}</strong> of{" "}
+                    <strong>{interviews.length}</strong> interviews
 
-            {
-                filteredInterviews.length === 0 ?
+                </p>
 
-                    (
+                {
+                    filteredInterviews.length === 0 ?
 
-                        <div className="alert alert-warning text-center">
+                        (
 
-                            <h4>🔍 No Interviews Found</h4>
+                            <div className="alert alert-warning text-center">
 
-                            <p>
-                                Try changing your search or filter.
-                            </p>
+                                <h4>🔍 No Interviews Found</h4>
 
-                        </div>
+                                <p>
+                                    Try changing your search or filter.
+                                </p>
 
-                    )
+                            </div>
 
-                    :
+                        )
 
-                    (
+                        :
 
-                        currentInterviews
+                        (
 
-                            .map((interview) => (
+                            currentInterviews
 
-                                <div
-                                    key={interview.id}
-                                    className="card shadow border-0 rounded-4 mb-4 interview-card"
-                                >
+                                .map((interview) => (
 
-                                    <div className="card-body p-4">
+                                    <div
+                                        key={interview.id}
+                                        className="card shadow border-0 rounded-4 mb-4 interview-card"
+                                    >
 
-                                        <h4 className="fw-bold text-primary">
-                                            {interview.jobRole}
-                                        </h4>
+                                        <div className="card-body p-4">
 
-                                        <p className="mb-2 text-muted">
+                                            <h4 className="fw-bold text-primary">
+                                                {interview.jobRole}
+                                            </h4>
 
-                                            💼 <strong>Experience:</strong> {interview.experienceLevel}
+                                            <p className="mb-2 text-muted">
 
-                                        </p>
-                                        <p className="mb-3">
+                                                💼 <strong>Experience:</strong> {interview.experienceLevel}
 
-                                            <strong>Status:</strong>{" "}
+                                            </p>
+                                            <p className="mb-3">
 
-                                            {interview.completed ? (
+                                                <strong>Status:</strong>{" "}
 
-                                                <span className="badge bg-success rounded-pill px-3 py-2">
+                                                {interview.completed ? (
 
-                                                    ✅ Completed
+                                                    <span className="badge bg-success rounded-pill px-3 py-2">
 
-                                                </span>
+                                                        ✅ Completed
 
-                                            ) : (
+                                                    </span>
 
-                                                <span className="badge bg-warning text-dark rounded-pill px-3 py-2">
+                                                ) : (
 
-                                                    ⏳ Pending
+                                                    <span className="badge bg-warning text-dark rounded-pill px-3 py-2">
 
-                                                </span>
+                                                        ⏳ Pending
 
-                                            )}
+                                                    </span>
 
-                                        </p>
-                                        <p className="text-muted">
-                                            📅 <strong>Created:</strong> {" "}
-                                            {new Date(interview.createdAt).toLocaleString()}
-                                        </p>
+                                                )}
 
-                                        <button
-                                            className="btn btn-primary btn-sm me-2"
-                                            onClick={() => navigate(`/interview/${interview.id}`)}
-                                        >
-                                            👁 View
-                                        </button>
+                                            </p>
+                                            <p className="text-muted">
+                                                📅 <strong>Created:</strong> {" "}
+                                                {new Date(interview.createdAt).toLocaleString()}
+                                            </p>
 
-                                        <button
-                                            className="btn btn-success btn-sm me-2"
-                                            onClick={() => navigate(`/report/${interview.id}`)}
-                                        >
-                                            📄 Report
-                                        </button>
+                                            <button
+                                                className="btn btn-primary btn-sm me-2"
+                                                onClick={() => navigate(`/interview/${interview.id}`)}
+                                            >
+                                                👁 View
+                                            </button>
 
-                                        <button
-                                            className="btn btn-warning btn-sm me-2"
-                                            onClick={() => navigate(`/edit/${interview.id}`)}
-                                        >
-                                            ✏ Edit
-                                        </button>
+                                            <button
+                                                className="btn btn-success btn-sm me-2"
+                                                onClick={() => navigate(`/report/${interview.id}`)}
+                                            >
+                                                📄 Report
+                                            </button>
 
-                                        <button
-                                            className="btn btn-danger"
-                                            onClick={() => handleDelete(interview.id)}
-                                            disabled={deletingId === interview.id}
-                                        >
-                                            {deletingId === interview.id ? (
-                                                <>
-                                                    <span
-                                                        className="spinner-border spinner-border-sm me-2"
-                                                        role="status"
-                                                    ></span>
-                                                    Deleting...
-                                                </>
-                                            ) : (
-                                                "🗑 Delete"
-                                            )}
-                                        </button>
+                                            <button
+                                                className="btn btn-warning btn-sm me-2"
+                                                onClick={() => navigate(`/edit/${interview.id}`)}
+                                            >
+                                                ✏ Edit
+                                            </button>
+
+                                            <button
+                                                className="btn btn-danger"
+                                                onClick={() => handleDelete(interview.id)}
+                                                disabled={deletingId === interview.id}
+                                            >
+                                                {deletingId === interview.id ? (
+                                                    <>
+                                                        <span
+                                                            className="spinner-border spinner-border-sm me-2"
+                                                            role="status"
+                                                        ></span>
+                                                        Deleting...
+                                                    </>
+                                                ) : (
+                                                    "🗑 Delete"
+                                                )}
+                                            </button>
+
+
+                                        </div>
 
 
                                     </div>
 
+                                ))
 
-                                </div>
+                        )
+                }
 
-                            ))
+                {totalPages > 1 && (
 
-                    )
-            }
-
-            {totalPages > 1 && (
-
-                <div className="d-flex justify-content-center mt-4">
-
-                    <button
-                        className="btn btn-outline-primary me-2"
-                        disabled={currentPage === 1}
-                        onClick={() => setCurrentPage(currentPage - 1)}
-                    >
-                        Previous
-                    </button>
-
-                    {[...Array(totalPages)].map((_, index) => (
+                    <div className="d-flex justify-content-center mt-4">
 
                         <button
-                            key={index}
-                            className={
-                                currentPage === index + 1
-                                    ? "btn btn-primary me-2"
-                                    : "btn btn-outline-primary me-2"
-                            }
-                            onClick={() => setCurrentPage(index + 1)}
+                            className="btn btn-outline-primary me-2"
+                            disabled={currentPage === 1}
+                            onClick={() => setCurrentPage(currentPage - 1)}
                         >
-                            {index + 1}
+                            Previous
                         </button>
 
-                    ))}
+                        {[...Array(totalPages)].map((_, index) => (
 
-                    <button
-                        className="btn btn-outline-primary"
-                        disabled={currentPage === totalPages}
-                        onClick={() => setCurrentPage(currentPage + 1)}
-                    >
-                        Next
-                    </button>
+                            <button
+                                key={index}
+                                className={
+                                    currentPage === index + 1
+                                        ? "btn btn-primary me-2"
+                                        : "btn btn-outline-primary me-2"
+                                }
+                                onClick={() => setCurrentPage(index + 1)}
+                            >
+                                {index + 1}
+                            </button>
 
-                </div>
+                        ))}
 
-            )}
+                        <button
+                            className="btn btn-outline-primary"
+                            disabled={currentPage === totalPages}
+                            onClick={() => setCurrentPage(currentPage + 1)}
+                        >
+                            Next
+                        </button>
+
+                    </div>
+
+
+                )}
+
+
+            </div>
+        </div>
 
 
 
-        </div >
     );
 }
 
