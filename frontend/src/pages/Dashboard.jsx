@@ -9,7 +9,7 @@ import jsPDF from "jspdf";
 import html2pdf from "html2pdf.js";
 import html2canvas from "html2canvas";
 import { useRef } from "react";
-import { Doughnut, Line } from "react-chartjs-2";
+import { Doughnut, Line, Bar } from "react-chartjs-2";
 import {
     Chart as ChartJS,
     ArcElement,
@@ -19,7 +19,8 @@ import {
     LinearScale,
     PointElement,
     LineElement,
-    Title
+    Title,
+    BarElement
 } from "chart.js";
 
 
@@ -30,7 +31,8 @@ ChartJS.register(ArcElement, Tooltip, Legend,
     LineElement,
     Title,
     Tooltip,
-    Legend
+    Legend,
+    BarElement
 );
 function Dashboard() {
 
@@ -48,6 +50,12 @@ function Dashboard() {
     const [scoreTrend, setScoreTrend] = useState([]);
     const [performanceHistory, setPerformanceHistory] = useState([]);
     const dashboardRef = useRef(null);
+    const [rolePerformance, setRolePerformance] = useState([]);
+    const [monthlyStats, setMonthlyStats] = useState([]);
+    const [weeklyActivity, setWeeklyActivity] = useState([]);
+    const [bestRole, setBestRole] = useState(null);
+    const [weakestRole, setWeakestRole] = useState(null);
+    const [topPerformers, setTopPerformers] = useState([]);
     const interviewsPerPage = 5;
 
     useEffect(() => {
@@ -55,6 +63,9 @@ function Dashboard() {
         fetchDashboardStats();
         fetchScoreTrend();
         fetchPerformanceHistory();
+        fetchRolePerformance();
+        fetchMonthlyStats();
+        fetchWeeklyActivity();
     }, []);
 
     const fetchInterviews = async () => {
@@ -110,6 +121,94 @@ function Dashboard() {
         }
 
     };
+    const fetchRolePerformance = async () => {
+
+        try {
+
+            const response = await axios.get(
+                "http://localhost:8080/api/interviews/role-performance",
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem("token")}`,
+                    },
+                }
+            );
+
+            setRolePerformance(response.data);
+
+            const sortedRoles = [...response.data]
+                .sort((a, b) => b.averageScore - a.averageScore)
+                .slice(0, 5);
+
+            setTopPerformers(sortedRoles);
+
+            const roles = response.data;
+
+            if (roles.length > 0) {
+
+                const best = roles.reduce((a, b) =>
+                    a.averageScore > b.averageScore ? a : b
+                );
+
+                const worst = roles.reduce((a, b) =>
+                    a.averageScore < b.averageScore ? a : b
+                );
+
+                setBestRole(best);
+                setWeakestRole(worst);
+            }
+
+        } catch (error) {
+
+            console.error(error);
+
+        }
+
+    };
+    const fetchMonthlyStats = async () => {
+
+        try {
+
+            const response = await axios.get(
+                "http://localhost:8080/api/interviews/monthly-stats",
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem("token")}`,
+                    },
+                }
+            );
+
+            setMonthlyStats(response.data);
+
+        } catch (error) {
+
+            console.error(error);
+
+        }
+
+    };
+    const fetchWeeklyActivity = async () => {
+
+        try {
+
+            const response = await axios.get(
+                "http://localhost:8080/api/interviews/weekly-activity",
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem("token")}`,
+                    },
+                }
+            );
+
+            setWeeklyActivity(response.data);
+
+        } catch (error) {
+
+            console.error(error);
+
+        }
+
+    };
     const fetchPerformanceHistory = async () => {
 
         try {
@@ -135,36 +234,36 @@ function Dashboard() {
 
     };
 
-const exportDashboardPDF = () => {
+    const exportDashboardPDF = () => {
 
-    const element = dashboardRef.current;
+        const element = dashboardRef.current;
 
-    const options = {
-        margin: [12,10,12,10],
-        filename: "InterviewAI_Dashboard.pdf",
-        image: {
-            type: "png",
-            quality: 1
-        },
-        html2canvas: {
-               scale: 1.5,
-    useCORS: true,
-    letterRendering: true,
-    scrollY: 0
-        },
-        jsPDF: {
-            unit: "mm",
-            format: "a4",
-            orientation: "portrait"
-        },
-        pagebreak: {
-            mode: ["avoid-all", "css", "legacy"]
-        }
+        const options = {
+            margin: [12, 10, 12, 10],
+            filename: "InterviewAI_Dashboard.pdf",
+            image: {
+                type: "png",
+                quality: 1
+            },
+            html2canvas: {
+                scale: 1.5,
+                useCORS: true,
+                letterRendering: true,
+                scrollY: 0
+            },
+            jsPDF: {
+                unit: "mm",
+                format: "a4",
+                orientation: "portrait"
+            },
+            pagebreak: {
+                mode: ["avoid-all", "css", "legacy"]
+            }
+        };
+
+        html2pdf().set(options).from(element).save();
+
     };
-
-    html2pdf().set(options).from(element).save();
-
-};
     console.log(interviews);
     interviews.forEach((interview) => {
         console.log(interview);
@@ -231,6 +330,75 @@ const exportDashboardPDF = () => {
             }
 
         ]
+
+    };
+    const roleChartData = {
+
+        labels: rolePerformance.map(item => item.jobRole),
+
+        datasets: [
+
+            {
+
+                label: "Average Score",
+
+                data: rolePerformance.map(item => item.averageScore),
+
+                backgroundColor: "#0d6efd",
+
+                borderRadius: 8,
+
+            },
+
+        ],
+
+    };
+    const monthlyChartData = {
+
+        labels: monthlyStats.map(item => item.month),
+
+        datasets: [
+
+            {
+
+                label: "Interviews",
+
+                data: monthlyStats.map(item => item.count),
+
+                borderColor: "#198754",
+
+                backgroundColor: "#198754",
+
+                fill: false,
+
+                tension: 0.4,
+
+                pointRadius: 5,
+
+            },
+
+        ],
+
+    };
+    const weeklyChartData = {
+
+        labels: weeklyActivity.map(item => item.day),
+
+        datasets: [
+
+            {
+
+                label: "Interviews",
+
+                data: weeklyActivity.map(item => item.count),
+
+                backgroundColor: "#fd7e14",
+
+                borderRadius: 8,
+
+            },
+
+        ],
 
     };
 
@@ -778,6 +946,170 @@ const exportDashboardPDF = () => {
                                     }
                                 }}
                             />
+
+                        </div>
+                        <div className="card shadow-lg border-0 rounded-4 mt-4 p-4">
+
+                            <h4 className="mb-4">
+                                📊 Role-wise Performance
+                            </h4>
+
+                            <Bar
+                                data={roleChartData}
+                                options={{
+                                    responsive: true,
+                                    plugins: {
+                                        legend: {
+                                            display: false,
+                                        },
+                                    },
+                                    scales: {
+                                        y: {
+                                            min: 0,
+                                            max: 10,
+                                        },
+                                    },
+                                }}
+                            />
+
+                        </div>
+                        <div className="card shadow-lg border-0 rounded-4 mt-4 p-4">
+
+                            <h4 className="mb-4">
+                                📅 Monthly Interview Statistics
+                            </h4>
+
+                            <Line
+                                data={monthlyChartData}
+                                options={{
+                                    responsive: true,
+                                    plugins: {
+                                        legend: {
+                                            display: true,
+                                        },
+                                    },
+                                    scales: {
+                                        y: {
+                                            beginAtZero: true,
+                                        },
+                                    },
+                                }}
+                            />
+
+                        </div>
+                        <div className="card shadow-lg border-0 rounded-4 mt-4 p-4">
+
+                            <h4 className="mb-4">
+                                📅 Weekly Activity
+                            </h4>
+
+                            <Bar
+                                data={weeklyChartData}
+                                options={{
+                                    responsive: true,
+                                    plugins: {
+                                        legend: {
+                                            display: false,
+                                        },
+                                    },
+                                    scales: {
+                                        y: {
+                                            beginAtZero: true,
+                                        },
+                                    },
+                                }}
+                            />
+
+                        </div>
+
+                        <div className="row mt-4">
+
+                            <div className="col-md-6 mb-3">
+
+                                <div className="card shadow-lg border-success h-100">
+
+                                    <div className="card-body text-center">
+
+                                        <h4>🏆 Best Performing Role</h4>
+
+                                        <h3 className="text-success">
+                                            {bestRole?.jobRole || "-"}
+                                        </h3>
+
+                                        <h4>
+                                            ⭐ {bestRole?.averageScore?.toFixed(1) || "0.0"} /10
+                                        </h4>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                            <div className="col-md-6 mb-3">
+
+                                <div className="card shadow-lg border-danger h-100">
+
+                                    <div className="card-body text-center">
+
+                                        <h4>⚠️ Needs Improvement</h4>
+
+                                        <h3 className="text-danger">
+                                            {weakestRole?.jobRole || "-"}
+                                        </h3>
+
+                                        <h4>
+                                            ⭐ {weakestRole?.averageScore?.toFixed(1) || "0.0"} /10
+                                        </h4>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+                        <div className="card shadow-lg border-0 rounded-4 mt-4 p-4">
+
+                            <h4 className="mb-4">
+                                🏅 Top Performing Roles
+                            </h4>
+
+                            <table className="table table-hover">
+
+                                <thead>
+
+                                    <tr>
+
+                                        <th>Rank</th>
+
+                                        <th>Role</th>
+
+                                        <th>Average Score</th>
+
+                                    </tr>
+
+                                </thead>
+
+                                <tbody>
+
+                                    {topPerformers.map((role, index) => (
+
+                                        <tr key={index}>
+
+                                            <td>#{index + 1}</td>
+
+                                            <td>{role.jobRole}</td>
+
+                                            <td>⭐ {role.averageScore.toFixed(1)}</td>
+
+                                        </tr>
+
+                                    ))}
+
+                                </tbody>
+
+                            </table>
 
                         </div>
                         <div className="card shadow-lg border-0 rounded-4 mt-4 p-4">

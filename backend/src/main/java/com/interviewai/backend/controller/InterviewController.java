@@ -11,6 +11,9 @@ import com.interviewai.backend.dto.UpdateInterviewRequest;
 import com.interviewai.backend.dto.InterviewReportResponse;
 import com.interviewai.backend.dto.DashboardStatsResponse;
 import com.interviewai.backend.dto.ScoreTrendResponse;
+import com.interviewai.backend.dto.RolePerformanceResponse;
+import com.interviewai.backend.dto.MonthlyStatsResponse;
+import com.interviewai.backend.dto.WeeklyActivityResponse;
 @RestController
 @RequestMapping("/api/interviews")
 public class InterviewController {
@@ -58,6 +61,24 @@ public class InterviewController {
     public List<ScoreTrendResponse> getScoreTrend() {
 
         return interviewService.getScoreTrend();
+
+    }
+    @GetMapping("/role-performance")
+    public List<RolePerformanceResponse> getRolePerformance() {
+
+        return interviewService.getRolePerformance();
+
+    }
+    @GetMapping("/monthly-stats")
+    public List<MonthlyStatsResponse> getMonthlyStats() {
+
+        return interviewService.getMonthlyStats();
+
+    }
+    @GetMapping("/weekly-activity")
+    public List<WeeklyActivityResponse> getWeeklyActivity() {
+
+        return interviewService.getWeeklyActivity();
 
     }
 }

@@ -18,7 +18,12 @@ import com.interviewai.backend.dto.DashboardStatsResponse;
 import com.interviewai.backend.dto.ScoreTrendResponse;
 import com.interviewai.backend.entity.Question;
 import com.interviewai.backend.repository.QuestionRepository;
-
+import com.interviewai.backend.dto.RolePerformanceResponse;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import com.interviewai.backend.dto.WeeklyActivityResponse;
 @Service
 public class InterviewService {
 
@@ -415,6 +420,160 @@ public class InterviewService {
         }
 
         return trend;
+    }
+    public List<RolePerformanceResponse> getRolePerformance() {
+
+        List<Interview> interviews = interviewRepository.findCompletedInterviews();
+
+        Map<String, List<Double>> roleScores = new HashMap<>();
+
+        for (Interview interview : interviews) {
+
+            double total = 0;
+            int count = 0;
+
+            for (Question q : interview.getQuestions()) {
+
+                if (q.getScore() != null && !q.getScore().isEmpty()) {
+
+                    String scoreText = q.getScore().split("/")[0];
+
+                    total += Double.parseDouble(scoreText);
+
+                    count++;
+
+                }
+
+            }
+
+            if (count > 0) {
+
+                double avg = total / count;
+
+                roleScores
+                        .computeIfAbsent(interview.getJobRole(), k -> new ArrayList<>())
+                        .add(avg);
+
+            }
+
+        }
+
+        List<RolePerformanceResponse> result = new ArrayList<>();
+
+        for (String role : roleScores.keySet()) {
+
+            List<Double> scores = roleScores.get(role);
+
+            double sum = scores.stream().mapToDouble(Double::doubleValue).sum();
+
+            result.add(new RolePerformanceResponse(role, sum / scores.size()));
+
+        }
+
+        return result;
+    }
+    public List<MonthlyStatsResponse> getMonthlyStats() {
+
+        List<Interview> interviews = interviewRepository.findAll();
+
+        Map<String, Long> monthMap = new LinkedHashMap<>();
+
+        monthMap.put("Jan", 0L);
+        monthMap.put("Feb", 0L);
+        monthMap.put("Mar", 0L);
+        monthMap.put("Apr", 0L);
+        monthMap.put("May", 0L);
+        monthMap.put("Jun", 0L);
+        monthMap.put("Jul", 0L);
+        monthMap.put("Aug", 0L);
+        monthMap.put("Sep", 0L);
+        monthMap.put("Oct", 0L);
+        monthMap.put("Nov", 0L);
+        monthMap.put("Dec", 0L);
+
+        String[] months = {
+                "Jan", "Feb", "Mar", "Apr",
+                "May", "Jun", "Jul", "Aug",
+                "Sep", "Oct", "Nov", "Dec"
+        };
+
+        for (Interview interview : interviews) {
+
+            int monthIndex = interview.getCreatedAt().getMonthValue() - 1;
+
+            String month = months[monthIndex];
+
+            monthMap.put(month, monthMap.get(month) + 1);
+
+        }
+
+        List<MonthlyStatsResponse> result = new ArrayList<>();
+
+        for (Map.Entry<String, Long> entry : monthMap.entrySet()) {
+
+            result.add(
+                    new MonthlyStatsResponse(
+                            entry.getKey(),
+                            entry.getValue()
+                    )
+            );
+
+        }
+
+        return result;
+    }
+    public List<WeeklyActivityResponse> getWeeklyActivity() {
+
+        List<Interview> interviews = interviewRepository.findAll();
+
+        Map<String, Long> dayMap = new LinkedHashMap<>();
+
+        dayMap.put("Mon", 0L);
+        dayMap.put("Tue", 0L);
+        dayMap.put("Wed", 0L);
+        dayMap.put("Thu", 0L);
+        dayMap.put("Fri", 0L);
+        dayMap.put("Sat", 0L);
+        dayMap.put("Sun", 0L);
+
+        for (Interview interview : interviews) {
+
+            String day = interview.getCreatedAt()
+                    .getDayOfWeek()
+                    .toString();
+
+            switch (day) {
+
+                case "MONDAY" -> dayMap.put("Mon", dayMap.get("Mon") + 1);
+
+                case "TUESDAY" -> dayMap.put("Tue", dayMap.get("Tue") + 1);
+
+                case "WEDNESDAY" -> dayMap.put("Wed", dayMap.get("Wed") + 1);
+
+                case "THURSDAY" -> dayMap.put("Thu", dayMap.get("Thu") + 1);
+
+                case "FRIDAY" -> dayMap.put("Fri", dayMap.get("Fri") + 1);
+
+                case "SATURDAY" -> dayMap.put("Sat", dayMap.get("Sat") + 1);
+
+                case "SUNDAY" -> dayMap.put("Sun", dayMap.get("Sun") + 1);
+
+            }
+
+        }
+
+        List<WeeklyActivityResponse> result = new ArrayList<>();
+
+        for (Map.Entry<String, Long> entry : dayMap.entrySet()) {
+
+            result.add(new WeeklyActivityResponse(
+                    entry.getKey(),
+                    entry.getValue()
+            ));
+
+        }
+
+        return result;
 
     }
 }
