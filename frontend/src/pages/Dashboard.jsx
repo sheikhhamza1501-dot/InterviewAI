@@ -8,6 +8,8 @@ import axios from "axios";
 import jsPDF from "jspdf";
 import html2pdf from "html2pdf.js";
 import html2canvas from "html2canvas";
+import { saveAs } from "file-saver";
+import * as htmlToImage from "html-to-image";
 import { useRef } from "react";
 import { Doughnut, Line, Bar } from "react-chartjs-2";
 import {
@@ -56,6 +58,12 @@ function Dashboard() {
     const [bestRole, setBestRole] = useState(null);
     const [weakestRole, setWeakestRole] = useState(null);
     const [topPerformers, setTopPerformers] = useState([]);
+    const scoreTrendRef = useRef(null);
+    const performanceDistributionRef = useRef(null);
+    const rolewisePerformanceRef = useRef(null);
+    const monthlyInterviewRef = useRef(null);
+    const weeklyActivityRef = useRef(null);
+    const [dateFilter, setDateFilter] = useState("ALL");
     const interviewsPerPage = 5;
 
     useEffect(() => {
@@ -264,21 +272,245 @@ function Dashboard() {
         html2pdf().set(options).from(element).save();
 
     };
+    const exportToCSV = () => {
+
+        const headers = [
+            "Job Role",
+            "Experience Level",
+            "Average Score",
+            "Status",
+            "Created Date"
+        ];
+
+        const rows = interviews.map(interview => [
+
+            interview.jobRole,
+
+            interview.experienceLevel,
+
+            interview.averageScore ?? "0.0",
+
+            interview.completed ? "Completed" : "Pending",
+
+            new Date(interview.createdAt).toLocaleDateString("en-GB")
+
+        ]);
+
+        const csvContent = [
+
+            headers.join(","),
+
+            ...rows.map(row => row.join(","))
+
+        ].join("\n");
+
+        const blob = new Blob(
+            [csvContent],
+            {
+                type: "text/csv;charset=utf-8;"
+            }
+        );
+
+        saveAs(blob, "InterviewAI_Dashboard.csv");
+
+    };
+    const downloadScoreTrend = async () => {
+
+        if (!scoreTrendRef.current) return;
+
+        try {
+
+            const dataUrl = await htmlToImage.toPng(scoreTrendRef.current);
+
+            const link = document.createElement("a");
+
+            link.download = "Score_Trend.png";
+
+            link.href = dataUrl;
+
+            link.click();
+
+        } catch (error) {
+
+            console.error(error);
+
+        }
+
+    };
+    const downloadPerformanceDistribution = async () => {
+
+        if (!performanceDistributionRef.current) return;
+
+        try {
+
+            const dataUrl = await htmlToImage.toPng(performanceDistributionRef.current);
+
+            const link = document.createElement("a");
+
+            link.download = "Performance_Distribution.png";
+
+            link.href = dataUrl;
+
+            link.click();
+
+        } catch (error) {
+
+            console.error(error);
+
+        }
+
+    };
+    const downloadrolewisePerformance = async () => {
+
+        if (!rolewisePerformanceRef.current) return;
+
+        try {
+
+            const dataUrl = await htmlToImage.toPng(rolewisePerformanceRef.current);
+
+            const link = document.createElement("a");
+
+            link.download = "Role-wise_Performance.png";
+
+            link.href = dataUrl;
+
+            link.click();
+
+        } catch (error) {
+
+            console.error(error);
+
+        }
+
+    };
+
+    const downloadmonthlyInterview = async () => {
+
+        if (!monthlyInterviewRef.current) return;
+
+        try {
+
+            const dataUrl = await htmlToImage.toPng(monthlyInterviewRef.current);
+
+            const link = document.createElement("a");
+
+            link.download = "Monthly Interview Statistics.png";
+
+            link.href = dataUrl;
+
+            link.click();
+
+        } catch (error) {
+
+            console.error(error);
+
+        }
+
+    };
+    const downloadweeklyActivity = async () => {
+
+        if (!weeklyActivityRef.current) return;
+
+        try {
+
+            const dataUrl = await htmlToImage.toPng(weeklyActivityRef.current);
+
+            const link = document.createElement("a");
+
+            link.download = "Weekly Activity.png";
+
+            link.href = dataUrl;
+
+            link.click();
+
+        } catch (error) {
+
+            console.error(error);
+
+        }
+
+
+    };
+    const getFilteredInterviews = () => {
+
+        if (dateFilter === "ALL") return interviews;
+
+        const days = Number(dateFilter);
+
+        const today = new Date();
+
+        return interviews.filter(interview => {
+
+            const created = new Date(interview.createdAt);
+
+            const diff =
+                (today - created) / (1000 * 60 * 60 * 24);
+
+            return diff <= days;
+
+        });
+
+    };
+
+    const getMostPracticedRole = () => {
+        const interviews = getFilteredInterviews();
+
+        if (interviews.length === 0) {
+            return {
+                role: "No Data",
+                count: 0
+            };
+        }
+
+        const roleCount = {};
+
+        interviews.forEach(interview => {
+
+            const role = interview.jobRole;
+
+            roleCount[role] = (roleCount[role] || 0) + 1;
+
+        });
+
+        let mostRole = "";
+        let maxCount = 0;
+
+        Object.entries(roleCount).forEach(([role, count]) => {
+
+            if (count > maxCount) {
+
+                maxCount = count;
+                mostRole = role;
+
+            }
+
+        });
+
+        return {
+            role: mostRole,
+            count: maxCount
+        };
+
+    };
+
     console.log(interviews);
     interviews.forEach((interview) => {
         console.log(interview);
     });
-    const excellent = interviews.filter(
+    const mostPracticedRole = getMostPracticedRole();
+
+    const filteredDashboardInterviews = getFilteredInterviews();
+    const excellent = filteredDashboardInterviews.filter(
         interview => interview.averageScore >= 8
     ).length;
 
-    const good = interviews.filter(
+    const good = filteredDashboardInterviews.filter(
         interview =>
             interview.averageScore >= 6 &&
             interview.averageScore < 8
     ).length;
 
-    const poor = interviews.filter(
+    const poor = filteredDashboardInterviews.filter(
         interview => interview.averageScore < 6
     ).length;
 
@@ -304,9 +536,13 @@ function Dashboard() {
             }
         ]
     };
+
+
     const lineChartData = {
 
-        labels: scoreTrend.map(item => item.date),
+        labels: filteredDashboardInterviews.map(interview =>
+            new Date(interview.createdAt).toLocaleDateString()
+        ),
 
         datasets: [
 
@@ -314,7 +550,9 @@ function Dashboard() {
 
                 label: "Average Score",
 
-                data: scoreTrend.map(item => item.score),
+                data: filteredDashboardInterviews.map(interview =>
+                    interview.averageScore || 0
+                ),
 
                 borderColor: "#0d6efd",
 
@@ -657,10 +895,10 @@ function Dashboard() {
                             🔄 Refresh
                         </button>
                         <button
-                            className="btn btn-danger"
-                            onClick={exportDashboardPDF}
+                            className="btn btn-success"
+                            onClick={exportToCSV}
                         >
-                            📄 Export Dashboard
+                            📄 Export Excel
                         </button>
 
                     </div>
@@ -684,7 +922,7 @@ function Dashboard() {
                             </div>
 
                         </div>
-                        <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
+                        <div className="col-lg-3 col-md-6 mb-3">
 
                             <div className="card shadow-lg border-0 rounded-4 text-center h-100">
 
@@ -710,7 +948,31 @@ function Dashboard() {
 
                         </div>
 
-                        <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
+                        <div className="col-lg-3 col-md-6 mb-3">
+
+                            <div className="card text-center border-info">
+
+                                <div className="card-body">
+
+                                    <h6>🎯 Most Practiced Role</h6>
+
+                                    <h5 className="text-info fw-bold">
+                                        {mostPracticedRole.role}
+                                    </h5>
+
+                                    <p className="mb-0">
+                                        {mostPracticedRole.count} Interviews
+                                    </p>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+
+                        <div className="col-lg-3 col-md-6 mb-3">
 
                             <div className="card shadow-lg border-0 rounded-4 text-center h-100">
 
@@ -738,7 +1000,7 @@ function Dashboard() {
 
                         </div>
 
-                        <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
+                        <div className="col-lg-3 col-md-6 mb-3">
 
                             <div className="card shadow-lg border-0 rounded-4 text-center h-100">
 
@@ -766,7 +1028,7 @@ function Dashboard() {
 
                         </div>
 
-                        <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
+                        <div className="col-lg-3 col-md-6 mb-3">
 
                             <div className="card shadow-lg border-0 rounded-4 text-center h-100">
 
@@ -803,7 +1065,7 @@ function Dashboard() {
                             </div>
                         </div>
 
-                        <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
+                        <div className="col-lg-3 col-md-6 mb-3">
 
                             <div className="card shadow-lg border-0 rounded-4 text-center h-100">
 
@@ -837,7 +1099,7 @@ function Dashboard() {
 
                         </div>
 
-                        <div className="col-lg-2 col-md-4 col-sm-6 mb-3">
+                        <div className="col-lg-3 col-md-6 mb-3">
 
                             <div className="card shadow-lg border-0 rounded-4 text-center h-100">
 
@@ -880,14 +1142,43 @@ function Dashboard() {
                             </div>
 
                         </div>
+                        <div className="d-flex justify-content-end mb-3">
 
-                        <div className="card shadow-lg border-0 rounded-4 mt-4 p-4">
+                            <select
+                                className="form-select"
+                                style={{ width: "220px" }}
+                                value={dateFilter}
+                                onChange={(e) => setDateFilter(e.target.value)}
+                            >
+
+                                <option value="7">Last 7 Days</option>
+
+                                <option value="30">Last 30 Days</option>
+
+                                <option value="90">Last 90 Days</option>
+
+                                <option value="ALL">All Time</option>
+
+                            </select>
+
+                        </div>
+
+                        <div
+                            ref={performanceDistributionRef}
+                            className="card shadow-lg border-0 rounded-4 mt-4 p-4">
 
                             <div className="d-flex justify-content-between align-items-center mb-4">
 
                                 <h4 className="mb-0">
                                     📊 Performance Distribution
                                 </h4>
+
+                                <button
+                                    className="btn btn-outline-primary btn-sm"
+                                    onClick={downloadPerformanceDistribution}
+                                >
+                                    📷 Download
+                                </button>
 
                                 <span className="badge bg-primary fs-6">
                                     {interviews.length} Interviews
@@ -928,11 +1219,21 @@ function Dashboard() {
                                 />
                             </div>
                         </div>
-                        <div className="card shadow-lg border-0 rounded-4 mt-4 p-4">
+
+                        <div
+                            ref={scoreTrendRef}
+                            className="card shadow-lg border-0 rounded-4 mt-4 p-4">
 
                             <h4 className="mb-4">
                                 📈 Score Trend
                             </h4>
+
+                            <button
+                                className="btn btn-outline-primary btn-sm"
+                                onClick={downloadScoreTrend}
+                            >
+                                📷 Download
+                            </button>
 
                             <Line
                                 data={lineChartData}
@@ -948,11 +1249,19 @@ function Dashboard() {
                             />
 
                         </div>
-                        <div className="card shadow-lg border-0 rounded-4 mt-4 p-4">
+                        <div
+                            ref={rolewisePerformanceRef}
+                            className="card shadow-lg border-0 rounded-4 mt-4 p-4">
 
                             <h4 className="mb-4">
                                 📊 Role-wise Performance
                             </h4>
+                            <button
+                                className="btn btn-outline-primary btn-sm"
+                                onClick={downloadrolewisePerformance}
+                            >
+                                📷 Download
+                            </button>
 
                             <Bar
                                 data={roleChartData}
@@ -973,11 +1282,19 @@ function Dashboard() {
                             />
 
                         </div>
-                        <div className="card shadow-lg border-0 rounded-4 mt-4 p-4">
-
+                        <div
+                            ref={monthlyInterviewRef}
+                            className="card shadow-lg border-0 rounded-4 mt-4 p-4">
+                            <button
+                                className="btn btn-outline-primary btn-sm"
+                                onClick={downloadmonthlyInterview}
+                            >
+                                📷 Download
+                            </button>
                             <h4 className="mb-4">
                                 📅 Monthly Interview Statistics
                             </h4>
+
 
                             <Line
                                 data={monthlyChartData}
@@ -997,11 +1314,20 @@ function Dashboard() {
                             />
 
                         </div>
-                        <div className="card shadow-lg border-0 rounded-4 mt-4 p-4">
+                        <div
+                            ref={weeklyActivityRef}
+                            className="card shadow-lg border-0 rounded-4 mt-4 p-4">
 
                             <h4 className="mb-4">
                                 📅 Weekly Activity
                             </h4>
+
+                            <button
+                                className="btn btn-outline-primary btn-sm"
+                                onClick={downloadweeklyActivity}
+                            >
+                                📷 Download
+                            </button>
 
                             <Bar
                                 data={weeklyChartData}
@@ -1293,7 +1619,7 @@ function Dashboard() {
                                             <h6>📊 Total Interviews</h6>
 
                                             <h3 className="text-primary">
-                                                {interviews.length}
+                                                {filteredDashboardInterviews.length}
                                             </h3>
 
                                         </div>
@@ -1436,7 +1762,7 @@ function Dashboard() {
 
                                 (
 
-                                    interviews
+                                    filteredDashboardInterviews
                                         .slice(0, 3)
                                         .map((interview) => (
 
@@ -1558,7 +1884,7 @@ function Dashboard() {
                 <p className="text-muted mb-3">
 
                     Showing <strong>{filteredInterviews.length}</strong> of{" "}
-                    <strong>{interviews.length}</strong> interviews
+                    <strong>{filteredDashboardInterviews.length}</strong> interviews
 
                 </p>
 
