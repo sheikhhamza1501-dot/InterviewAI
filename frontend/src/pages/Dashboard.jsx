@@ -55,9 +55,6 @@ function Dashboard() {
     const [rolePerformance, setRolePerformance] = useState([]);
     const [monthlyStats, setMonthlyStats] = useState([]);
     const [weeklyActivity, setWeeklyActivity] = useState([]);
-    const [bestRole, setBestRole] = useState(null);
-    const [weakestRole, setWeakestRole] = useState(null);
-    const [topPerformers, setTopPerformers] = useState([]);
     const scoreTrendRef = useRef(null);
     const performanceDistributionRef = useRef(null);
     const rolewisePerformanceRef = useRef(null);
@@ -74,7 +71,7 @@ function Dashboard() {
         fetchRolePerformance();
         fetchMonthlyStats();
         fetchWeeklyActivity();
-    }, []);
+    }, [dateFilter]);
 
     const fetchInterviews = async () => {
 
@@ -104,22 +101,25 @@ function Dashboard() {
 
             const token = localStorage.getItem("token");
 
-            const response = await axios.get(
+            let url =
+                "http://localhost:8080/api/interviews/dashboard/score-trend";
 
-                "http://localhost:8080/api/interviews/dashboard/score-trend",
+            if (dateFilter !== "ALL") {
 
-                {
+                url += `?days=${dateFilter}`;
 
-                    headers: {
+            }
 
-                        Authorization: `Bearer ${token}`
+            const response = await axios.get(url, {
 
-                    }
+                headers: {
+
+                    Authorization: `Bearer ${token}`
 
                 }
 
-            );
-
+            });
+            console.log(response.data);
             setScoreTrend(response.data);
 
         } catch (error) {
@@ -133,38 +133,21 @@ function Dashboard() {
 
         try {
 
-            const response = await axios.get(
-                "http://localhost:8080/api/interviews/role-performance",
-                {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem("token")}`,
-                    },
-                }
-            );
+            const token = localStorage.getItem("token");
 
-            setRolePerformance(response.data);
+            let url = "http://localhost:8080/api/interviews/role-performance";
 
-            const sortedRoles = [...response.data]
-                .sort((a, b) => b.averageScore - a.averageScore)
-                .slice(0, 5);
-
-            setTopPerformers(sortedRoles);
-
-            const roles = response.data;
-
-            if (roles.length > 0) {
-
-                const best = roles.reduce((a, b) =>
-                    a.averageScore > b.averageScore ? a : b
-                );
-
-                const worst = roles.reduce((a, b) =>
-                    a.averageScore < b.averageScore ? a : b
-                );
-
-                setBestRole(best);
-                setWeakestRole(worst);
+            if (dateFilter !== "ALL") {
+                url += `?days=${dateFilter}`;
             }
+
+            const response = await axios.get(url, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+            console.log("Role Performance:", response.data);
+            setRolePerformance(response.data);
 
         } catch (error) {
 
@@ -177,14 +160,24 @@ function Dashboard() {
 
         try {
 
-            const response = await axios.get(
-                "http://localhost:8080/api/interviews/monthly-stats",
-                {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem("token")}`,
-                    },
+            const token = localStorage.getItem("token");
+
+            let url =
+                "http://localhost:8080/api/interviews/monthly-stats";
+
+            if (dateFilter !== "ALL") {
+
+                url += `?days=${dateFilter}`;
+
+            }
+
+            const response = await axios.get(url, {
+
+                headers: {
+                    Authorization: `Bearer ${token}`
                 }
-            );
+
+            });
 
             setMonthlyStats(response.data);
 
@@ -540,8 +533,8 @@ function Dashboard() {
 
     const lineChartData = {
 
-        labels: filteredDashboardInterviews.map(interview =>
-            new Date(interview.createdAt).toLocaleDateString()
+        labels: scoreTrend.map(item =>
+            new Date(item.date).toLocaleDateString("en-GB")
         ),
 
         datasets: [
@@ -550,8 +543,8 @@ function Dashboard() {
 
                 label: "Average Score",
 
-                data: filteredDashboardInterviews.map(interview =>
-                    interview.averageScore || 0
+                data: scoreTrend.map(item =>
+                    item.score
                 ),
 
                 borderColor: "#0d6efd",
@@ -712,6 +705,23 @@ function Dashboard() {
 
     };
 
+    const bestRole =
+        rolePerformance.length > 0
+            ? [...rolePerformance].sort(
+                (a, b) => b.averageScore - a.averageScore
+            )[0]
+            : null;
+
+    const weakestRole =
+        rolePerformance.length > 0
+            ? [...rolePerformance].sort(
+                (a, b) => a.averageScore - b.averageScore
+            )[0]
+            : null;
+    const topPerformers = [...rolePerformance]
+        .sort((a, b) => b.averageScore - a.averageScore)
+        .slice(0, 5);
+
     if (loading) {
 
         return (
@@ -850,6 +860,11 @@ function Dashboard() {
 
     console.log(scoreTrend);
     console.log(lineChartData);
+
+    console.log("bestRole:", bestRole);
+    console.log("worstRole:", weakestRole);
+    console.log("rolePerformance:", rolePerformance);
+    console.log("topPerformers:", topPerformers);
     return (
         <div>
             <Navbar />
@@ -1419,15 +1434,15 @@ function Dashboard() {
 
                                 <tbody>
 
-                                    {topPerformers.map((role, index) => (
+                                    {topPerformers.map((item, index) => (
 
                                         <tr key={index}>
 
                                             <td>#{index + 1}</td>
 
-                                            <td>{role.jobRole}</td>
+                                            <td>{item.jobRole}</td>
 
-                                            <td>⭐ {role.averageScore.toFixed(1)}</td>
+                                            <td>⭐ {item.averageScore.toFixed(1)}</td>
 
                                         </tr>
 

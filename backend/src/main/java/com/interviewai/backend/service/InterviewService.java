@@ -355,7 +355,7 @@ public class InterviewService {
 
         return response;
     }
-    public List<ScoreTrendResponse> getScoreTrend() {
+    public List<ScoreTrendResponse> getScoreTrend(Integer days) {
 
 
         Authentication authentication =
@@ -367,6 +367,19 @@ public class InterviewService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         List<Interview> interviews = interviewRepository.findByUser(user);
+
+        if (days != null) {
+
+            LocalDateTime cutoffDate = LocalDateTime.now().minusDays(days);
+
+            interviews = interviews.stream()
+
+                    .filter(interview ->
+                            interview.getCreatedAt().isAfter(cutoffDate))
+
+                    .toList();
+
+        }
 
         List<ScoreTrendResponse> trend = new ArrayList<>();
 
@@ -421,10 +434,21 @@ public class InterviewService {
 
         return trend;
     }
-    public List<RolePerformanceResponse> getRolePerformance() {
+    public List<RolePerformanceResponse> getRolePerformance(Integer days) {
 
         List<Interview> interviews = interviewRepository.findCompletedInterviews();
+        if (days != null) {
 
+            LocalDateTime cutoffDate = LocalDateTime.now().minusDays(days);
+
+            interviews = interviews.stream()
+
+                    .filter(interview ->
+                            interview.getCreatedAt().isAfter(cutoffDate))
+
+                    .toList();
+
+        }
         Map<String, List<Double>> roleScores = new HashMap<>();
 
         for (Interview interview : interviews) {
@@ -472,10 +496,21 @@ public class InterviewService {
 
         return result;
     }
-    public List<MonthlyStatsResponse> getMonthlyStats() {
+    public List<MonthlyStatsResponse> getMonthlyStats(Integer days) {
 
         List<Interview> interviews = interviewRepository.findAll();
+        if (days != null) {
 
+            LocalDateTime cutoffDate = LocalDateTime.now().minusDays(days);
+
+            interviews = interviews.stream()
+
+                    .filter(interview ->
+                            interview.getCreatedAt().isAfter(cutoffDate))
+
+                    .toList();
+
+        }
         Map<String, Long> monthMap = new LinkedHashMap<>();
 
         monthMap.put("Jan", 0L);

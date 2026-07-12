@@ -58,21 +58,33 @@ public class InterviewController {
 
     }
     @GetMapping("/dashboard/score-trend")
-    public List<ScoreTrendResponse> getScoreTrend() {
+    public List<ScoreTrendResponse> getScoreTrend(
 
-        return interviewService.getScoreTrend();
+            @RequestParam(required = false) Integer days
+
+    ) {
+
+        return interviewService.getScoreTrend(days);
 
     }
     @GetMapping("/role-performance")
-    public List<RolePerformanceResponse> getRolePerformance() {
+    public List<RolePerformanceResponse> getRolePerformance(
 
-        return interviewService.getRolePerformance();
+            @RequestParam(required = false) Integer days
+
+    ) {
+
+        return interviewService.getRolePerformance(days);
 
     }
     @GetMapping("/monthly-stats")
-    public List<MonthlyStatsResponse> getMonthlyStats() {
+    public List<MonthlyStatsResponse> getMonthlyStats(
 
-        return interviewService.getMonthlyStats();
+            @RequestParam(required = false) Integer days
+
+    ) {
+
+        return interviewService.getMonthlyStats(days);
 
     }
     @GetMapping("/weekly-activity")
