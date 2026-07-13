@@ -21,3 +21,6 @@ export const getDashboardStats = async () => {
     return response.data;
 
 };
+export const toggleFavorite = async (id) => {
+    return await api.put(`/interviews/${id}/favorite`);
+};

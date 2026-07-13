@@ -22,6 +22,7 @@ public class Interview {
 
     private Boolean completed = false;
 
+    private Boolean favorite = false;
 
     @ManyToOne
     @JoinColumn(name = "user_id")
@@ -86,6 +87,14 @@ public class Interview {
 
     public void setQuestions(List<Question> questions) {
         this.questions = questions;
+    }
+
+    public Boolean getFavorite() {
+        return favorite;
+    }
+
+    public void setFavorite(Boolean favorite) {
+        this.favorite = favorite;
     }
 
 }

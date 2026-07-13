@@ -85,6 +85,7 @@ public class InterviewService {
             response.setExperienceLevel(interview.getExperienceLevel());
             response.setCreatedAt(interview.getCreatedAt().toString());
             response.setCompleted(interview.getCompleted());
+            response.setFavorite(interview.getFavorite());
             System.out.println("Interview ID: " + interview.getId());
 
             if (interview.getQuestions() == null) {
@@ -557,10 +558,17 @@ public class InterviewService {
 
         return result;
     }
-    public List<WeeklyActivityResponse> getWeeklyActivity() {
+    public List<WeeklyActivityResponse> getWeeklyActivity(Integer days) {
 
         List<Interview> interviews = interviewRepository.findAll();
+        if (days != null) {
 
+            LocalDateTime cutoff = LocalDateTime.now().minusDays(days);
+
+            interviews = interviews.stream()
+                    .filter(i -> i.getCreatedAt().isAfter(cutoff))
+                    .toList();
+        }
         Map<String, Long> dayMap = new LinkedHashMap<>();
 
         dayMap.put("Mon", 0L);
@@ -611,4 +619,15 @@ public class InterviewService {
         return result;
 
     }
+
+    public Interview toggleFavorite(Long interviewId) {
+
+        Interview interview = interviewRepository.findById(interviewId)
+                .orElseThrow(() -> new RuntimeException("Interview not found"));
+
+        interview.setFavorite(!Boolean.TRUE.equals(interview.getFavorite()));
+
+        return interviewRepository.save(interview);
+    }
+
 }

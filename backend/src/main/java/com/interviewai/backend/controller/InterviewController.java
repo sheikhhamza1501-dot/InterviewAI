@@ -14,6 +14,8 @@ import com.interviewai.backend.dto.ScoreTrendResponse;
 import com.interviewai.backend.dto.RolePerformanceResponse;
 import com.interviewai.backend.dto.MonthlyStatsResponse;
 import com.interviewai.backend.dto.WeeklyActivityResponse;
+import org.springframework.http.ResponseEntity;
+import com.interviewai.backend.entity.Interview;
 @RestController
 @RequestMapping("/api/interviews")
 public class InterviewController {
@@ -87,11 +89,23 @@ public class InterviewController {
         return interviewService.getMonthlyStats(days);
 
     }
-    @GetMapping("/weekly-activity")
-    public List<WeeklyActivityResponse> getWeeklyActivity() {
 
-        return interviewService.getWeeklyActivity();
+    @GetMapping("/dashboard/weekly-activity")
+    public ResponseEntity<List<WeeklyActivityResponse>> getWeeklyActivity(
+            @RequestParam(required = false) Integer days
+    ) {
+        return ResponseEntity.ok(
+                interviewService.getWeeklyActivity(days)
+        );
+    }
+    @PutMapping("/{id}/favorite")
+    public ResponseEntity<Interview> toggleFavorite(
+            @PathVariable Long id
+    ) {
 
+        return ResponseEntity.ok(
+                interviewService.toggleFavorite(id)
+        );
     }
 }
 

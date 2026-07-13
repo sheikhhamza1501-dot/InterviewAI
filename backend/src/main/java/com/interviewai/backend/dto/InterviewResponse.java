@@ -8,6 +8,7 @@ public class InterviewResponse {
         private String createdAt;
     private Boolean completed;
     private Double averageScore;
+    private Boolean favorite;
         public InterviewResponse() {
         }
 
@@ -55,5 +56,12 @@ public class InterviewResponse {
     }
     public void setAverageScore(Double averageScore) {
         this.averageScore = averageScore;
+    }
+    public Boolean getFavorite() {
+        return favorite;
+    }
+
+    public void setFavorite(Boolean favorite) {
+        this.favorite = favorite;
     }
 }

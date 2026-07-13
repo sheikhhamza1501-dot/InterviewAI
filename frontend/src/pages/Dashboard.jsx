@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import api from "../services/api";
 import Navbar from "../component/Navbar";
-import { deleteInterview } from "../services/InterviewService";
 import { useNavigate } from "react-router-dom";
 import { getDashboardStats } from "../services/interviewService";
 import axios from "axios";
+import {
+    deleteInterview,
+    toggleFavorite
+} from "../services/InterviewService";
 import jsPDF from "jspdf";
 import html2pdf from "html2pdf.js";
 import html2canvas from "html2canvas";
@@ -61,6 +64,7 @@ function Dashboard() {
     const monthlyInterviewRef = useRef(null);
     const weeklyActivityRef = useRef(null);
     const [dateFilter, setDateFilter] = useState("ALL");
+    const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
     const interviewsPerPage = 5;
 
     useEffect(() => {
@@ -129,6 +133,23 @@ function Dashboard() {
         }
 
     };
+
+    const handleToggleFavorite = async (id) => {
+
+    try {
+
+        await toggleFavorite(id);
+
+        fetchInterviews();          // Refresh interview list
+        fetchDashboardStats();      // Refresh dashboard counts if needed
+
+    } catch (error) {
+
+        console.error(error);
+
+    }
+
+};
     const fetchRolePerformance = async () => {
 
         try {
@@ -188,28 +209,32 @@ function Dashboard() {
         }
 
     };
-    const fetchWeeklyActivity = async () => {
+const fetchWeeklyActivity = async () => {
 
-        try {
+    try {
 
-            const response = await axios.get(
-                "http://localhost:8080/api/interviews/weekly-activity",
-                {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem("token")}`,
-                    },
-                }
-            );
+        const token = localStorage.getItem("token");
 
-            setWeeklyActivity(response.data);
+        let url =
+            "http://localhost:8080/api/interviews/dashboard/weekly-activity";
 
-        } catch (error) {
-
-            console.error(error);
-
+        if (dateFilter !== "ALL") {
+            url += `?days=${dateFilter}`;
         }
 
-    };
+        const response = await axios.get(url, {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        });
+
+        setWeeklyActivity(response.data);
+
+    } catch (error) {
+        console.error(error);
+    }
+
+};
     const fetchPerformanceHistory = async () => {
 
         try {
@@ -425,8 +450,8 @@ function Dashboard() {
 
     };
     const getFilteredInterviews = () => {
-
-        if (dateFilter === "ALL") return interviews;
+let filtered=[...interviews];
+        if (dateFilter !=="ALL"){
 
         const days = Number(dateFilter);
 
@@ -442,6 +467,16 @@ function Dashboard() {
             return diff <= days;
 
         });
+    }
+       if (showFavoritesOnly) {
+
+        filtered = filtered.filter(
+            interview => interview.favorite
+        );
+
+    }
+
+    return filtered;
 
     };
 
@@ -748,7 +783,7 @@ function Dashboard() {
 
     }
 
-    const filteredInterviews = interviews
+    const filteredInterviews = getFilteredInterviews()
         .filter((interview) => {
 
             const matchesSearch = interview.jobRole
@@ -763,15 +798,33 @@ function Dashboard() {
             return matchesSearch && matchesStatus;
 
         })
-        .sort((a, b) => {
+.sort((a, b) => {
 
-            if (sortOrder === "Newest") {
-                return new Date(b.createdAt) - new Date(a.createdAt);
-            }
+    switch (sortOrder) {
 
+        case "Newest":
+            return new Date(b.createdAt) - new Date(a.createdAt);
+
+        case "Oldest":
             return new Date(a.createdAt) - new Date(b.createdAt);
 
-        });
+        case "Highest Score":
+            return (b.averageScore || 0) - (a.averageScore || 0);
+
+        case "Lowest Score":
+            return (a.averageScore || 0) - (b.averageScore || 0);
+
+        case "A-Z":
+            return a.jobRole.localeCompare(b.jobRole);
+
+        case "Z-A":
+            return b.jobRole.localeCompare(a.jobRole);
+
+        default:
+            return 0;
+    }
+
+});
 
     const indexOfLastInterview = currentPage * interviewsPerPage;
 
@@ -1863,19 +1916,21 @@ function Dashboard() {
                     </div>
                     <div className="col-lg-2 col-md-3">
 
-                        <select
-                            className="form-select"
-                            value={sortOrder}
-                            onChange={(e) => {
-                                setSortOrder(e.target.value);
-                                setCurrentPage(1);
-                            }}
-                        >
-
-                            <option value="Newest">Newest First</option>
-                            <option value="Oldest">Oldest First</option>
-
-                        </select>
+                    <select
+    className="form-select"
+    value={sortOrder}
+    onChange={(e) => {
+        setSortOrder(e.target.value);
+        setCurrentPage(1);
+    }}
+>
+    <option value="Newest">🆕 Newest First</option>
+    <option value="Oldest">📅 Oldest First</option>
+    <option value="Highest Score">⭐ Highest Score</option>
+    <option value="Lowest Score">📉 Lowest Score</option>
+    <option value="A-Z">🔤 A-Z</option>
+    <option value="Z-A">🔠 Z-A</option>
+</select>
 
                     </div>
                     <div className="col-lg-2 col-md-3 d-grid">
@@ -1891,8 +1946,19 @@ function Dashboard() {
                         >
                             Reset
                         </button>
+                        
 
                     </div>
+                     <div className="col-lg-2 col-md-3 d-grid">
+
+                    <button
+    className={`btn ${showFavoritesOnly ? "btn-warning" : "btn-outline-warning"} ms-2`}
+    onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+>
+    {showFavoritesOnly ? "⭐ Showing Favorites" : "☆ Show Favorites"}
+</button>
+
+</div>
                 </div>
 
 
@@ -1971,6 +2037,14 @@ function Dashboard() {
                                                 📅 <strong>Created:</strong> {" "}
                                                 {new Date(interview.createdAt).toLocaleString()}
                                             </p>
+                                            <button
+    className={`btn btn-sm me-2 ${
+        interview.favorite ? "btn-warning" : "btn-outline-warning"
+    }`}
+    onClick={() => handleToggleFavorite(interview.id)}
+>
+    {interview.favorite ? "⭐ Favorited" : "☆ Favorite"}
+</button>
 
                                             <button
                                                 className="btn btn-primary btn-sm me-2"
