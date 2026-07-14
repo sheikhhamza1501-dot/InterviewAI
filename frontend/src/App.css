@@ -189,17 +189,25 @@
 }
 
 .interview-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 25px rgba(0,0,0,0.15);
+    transform: translateY(-6px);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.15);
 }
 .dashboard-card {
+    min-height: 220px;
     transition: all 0.3s ease;
-    cursor: pointer;
 }
 
 .dashboard-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 25px rgba(0,0,0,0.15);
+    transform: translateY(-6px);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+}
+
+.dashboard-card h1 {
+    margin: 0;
+}
+
+.dashboard-card small {
+    font-size: 14px;
 }
 
 .interview-card {
@@ -217,4 +225,18 @@ h1, h2, h3, h4, h5 {
 
 p {
     line-height: 1.5;
+}
+.btn {
+    transition: all 0.25s ease;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+}
+.chart-card {
+    transition: all 0.3s ease;
+}
+
+.chart-card:hover {
+    box-shadow: 0 15px 30px rgba(0,0,0,0.12);
 }

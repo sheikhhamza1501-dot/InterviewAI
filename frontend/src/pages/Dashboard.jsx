@@ -68,18 +68,29 @@ function Dashboard() {
     const interviewsPerPage = 5;
 
     useEffect(() => {
-        fetchInterviews();
-        fetchDashboardStats();
-        fetchScoreTrend();
-        fetchPerformanceHistory();
-        fetchRolePerformance();
-        fetchMonthlyStats();
-        fetchWeeklyActivity();
+        const loadDashboard = async () => {
+            setLoading(true);
+            try {
+                await Promise.all([
+                    fetchInterviews(),
+                    fetchDashboardStats(),
+                    fetchScoreTrend(),
+                    fetchPerformanceHistory(),
+                    fetchRolePerformance(),
+                    fetchMonthlyStats(),
+                    fetchWeeklyActivity()
+                ]);
+            } catch (error) {
+                console.log(error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadDashboard();
     }, [dateFilter]);
 
     const fetchInterviews = async () => {
 
-        setLoading(true);
 
         try {
 
@@ -89,7 +100,6 @@ function Dashboard() {
 
             setInterviews(response.data);
 
-            setLoading(false);
 
         } catch (error) {
 
@@ -136,20 +146,20 @@ function Dashboard() {
 
     const handleToggleFavorite = async (id) => {
 
-    try {
+        try {
 
-        await toggleFavorite(id);
+            await toggleFavorite(id);
 
-        fetchInterviews();          // Refresh interview list
-        fetchDashboardStats();      // Refresh dashboard counts if needed
+            fetchInterviews();          // Refresh interview list
+            fetchDashboardStats();      // Refresh dashboard counts if needed
 
-    } catch (error) {
+        } catch (error) {
 
-        console.error(error);
+            console.error(error);
 
-    }
+        }
 
-};
+    };
     const fetchRolePerformance = async () => {
 
         try {
@@ -209,32 +219,32 @@ function Dashboard() {
         }
 
     };
-const fetchWeeklyActivity = async () => {
+    const fetchWeeklyActivity = async () => {
 
-    try {
+        try {
 
-        const token = localStorage.getItem("token");
+            const token = localStorage.getItem("token");
 
-        let url =
-            "http://localhost:8080/api/interviews/dashboard/weekly-activity";
+            let url =
+                "http://localhost:8080/api/interviews/dashboard/weekly-activity";
 
-        if (dateFilter !== "ALL") {
-            url += `?days=${dateFilter}`;
+            if (dateFilter !== "ALL") {
+                url += `?days=${dateFilter}`;
+            }
+
+            const response = await axios.get(url, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+
+            setWeeklyActivity(response.data);
+
+        } catch (error) {
+            console.error(error);
         }
 
-        const response = await axios.get(url, {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        });
-
-        setWeeklyActivity(response.data);
-
-    } catch (error) {
-        console.error(error);
-    }
-
-};
+    };
     const fetchPerformanceHistory = async () => {
 
         try {
@@ -266,13 +276,13 @@ const fetchWeeklyActivity = async () => {
 
         const options = {
             margin: [12, 10, 12, 10],
-            filename: "InterviewAI_Dashboard.pdf",
+            filename: "InterviewAI_Dashboard_${today}.png",
             image: {
                 type: "png",
                 quality: 1
             },
             html2canvas: {
-                scale: 1.5,
+                scale: 3,
                 useCORS: true,
                 letterRendering: true,
                 scrollY: 0
@@ -329,7 +339,7 @@ const fetchWeeklyActivity = async () => {
             }
         );
 
-        saveAs(blob, "InterviewAI_Dashboard.csv");
+        saveAs(blob, "InterviewAI_Report_${today}.csv");
 
     };
     const downloadScoreTrend = async () => {
@@ -450,33 +460,33 @@ const fetchWeeklyActivity = async () => {
 
     };
     const getFilteredInterviews = () => {
-let filtered=[...interviews];
-        if (dateFilter !=="ALL"){
+        let filtered = [...interviews];
+        if (dateFilter !== "ALL") {
 
-        const days = Number(dateFilter);
+            const days = Number(dateFilter);
 
-        const today = new Date();
+            const today = new Date();
 
-        return interviews.filter(interview => {
+            return interviews.filter(interview => {
 
-            const created = new Date(interview.createdAt);
+                const created = new Date(interview.createdAt);
 
-            const diff =
-                (today - created) / (1000 * 60 * 60 * 24);
+                const diff =
+                    (today - created) / (1000 * 60 * 60 * 24);
 
-            return diff <= days;
+                return diff <= days;
 
-        });
-    }
-       if (showFavoritesOnly) {
+            });
+        }
+        if (showFavoritesOnly) {
 
-        filtered = filtered.filter(
-            interview => interview.favorite
-        );
+            filtered = filtered.filter(
+                interview => interview.favorite
+            );
 
-    }
+        }
 
-    return filtered;
+        return filtered;
 
     };
 
@@ -705,40 +715,132 @@ let filtered=[...interviews];
 
     const handleDelete = async (id) => {
 
-        const confirmDelete = window.confirm(
-            "Are you sure you want to delete this interview?"
+        const confirmed = window.confirm(
+
+            "Are you sure you want to delete this interview?\n\nThis action cannot be undone."
+
         );
 
-        if (!confirmDelete) return;
+        if (!confirmed) {
+
+            return;
+
+        }
+
+        setDeletingId(id);
 
         try {
-            setDeletingId(id);
+
             await deleteInterview(id);
-            setDeletingId(null);
-
-            setMessage("Interview deleted successfully!");
-            setMessageType("success");
-
-            setTimeout(() => {
-                setMessage("");
-            }, 3000);
 
             fetchInterviews();
+
+            fetchDashboardStats();
+
+            alert("✅ Interview deleted successfully!");
 
         } catch (error) {
 
             console.log(error);
-            setDeletingId(null);
-            setMessage("Failed to delete interview.");
-            setMessageType("danger");
 
-            setTimeout(() => {
-                setMessage("");
-            }, 3000);
+            alert("❌ Failed to delete interview.");
 
         }
 
+        setDeletingId(null);
+
     };
+    const filteredInterviews = getFilteredInterviews()
+        .filter((interview) => {
+
+            const matchesSearch = interview.jobRole
+                .toLowerCase()
+                .includes(searchTerm.toLowerCase());
+
+            const matchesStatus =
+                statusFilter === "All" ||
+                (statusFilter === "Completed" && interview.completed) ||
+                (statusFilter === "Pending" && !interview.completed);
+
+            return matchesSearch && matchesStatus;
+
+        })
+        .sort((a, b) => {
+
+            switch (sortOrder) {
+
+                case "Newest":
+                    return new Date(b.createdAt) - new Date(a.createdAt);
+
+                case "Oldest":
+                    return new Date(a.createdAt) - new Date(b.createdAt);
+
+                case "Highest Score":
+                    return (b.averageScore || 0) - (a.averageScore || 0);
+
+                case "Lowest Score":
+                    return (a.averageScore || 0) - (b.averageScore || 0);
+
+                case "A-Z":
+                    return a.jobRole.localeCompare(b.jobRole);
+
+                case "Z-A":
+                    return b.jobRole.localeCompare(a.jobRole);
+
+                default:
+                    return 0;
+            }
+
+        });
+
+    const indexOfLastInterview = currentPage * interviewsPerPage;
+
+    const indexOfFirstInterview =
+        indexOfLastInterview - interviewsPerPage;
+
+    const currentInterviews =
+        filteredInterviews.slice(
+            indexOfFirstInterview,
+            indexOfLastInterview
+        );
+
+    const totalPages = Math.ceil(
+        filteredInterviews.length / interviewsPerPage
+    );
+
+    const csvHeaders = [
+        "Job Role",
+        "Experience",
+        "Status",
+        "Favorite",
+        "Average Score",
+        "Created At"
+    ];
+
+    const csvRows = filteredInterviews.map(interview => [
+
+        interview.jobRole,
+
+        interview.experienceLevel,
+
+        interview.completed ? "Completed" : "Pending",
+
+        interview.favorite ? "Yes" : "No",
+
+        interview.averageScore?.toFixed(1) || "0.0",
+
+        new Date(interview.createdAt).toLocaleString()
+
+    ]);
+
+    const csvContent = [
+
+        csvHeaders.join(","),
+
+        ...csvRows.map(row => row.join(","))
+
+    ].join("\n");
+
 
     const bestRole =
         rolePerformance.length > 0
@@ -783,63 +885,6 @@ let filtered=[...interviews];
 
     }
 
-    const filteredInterviews = getFilteredInterviews()
-        .filter((interview) => {
-
-            const matchesSearch = interview.jobRole
-                .toLowerCase()
-                .includes(searchTerm.toLowerCase());
-
-            const matchesStatus =
-                statusFilter === "All" ||
-                (statusFilter === "Completed" && interview.completed) ||
-                (statusFilter === "Pending" && !interview.completed);
-
-            return matchesSearch && matchesStatus;
-
-        })
-.sort((a, b) => {
-
-    switch (sortOrder) {
-
-        case "Newest":
-            return new Date(b.createdAt) - new Date(a.createdAt);
-
-        case "Oldest":
-            return new Date(a.createdAt) - new Date(b.createdAt);
-
-        case "Highest Score":
-            return (b.averageScore || 0) - (a.averageScore || 0);
-
-        case "Lowest Score":
-            return (a.averageScore || 0) - (b.averageScore || 0);
-
-        case "A-Z":
-            return a.jobRole.localeCompare(b.jobRole);
-
-        case "Z-A":
-            return b.jobRole.localeCompare(a.jobRole);
-
-        default:
-            return 0;
-    }
-
-});
-
-    const indexOfLastInterview = currentPage * interviewsPerPage;
-
-    const indexOfFirstInterview =
-        indexOfLastInterview - interviewsPerPage;
-
-    const currentInterviews =
-        filteredInterviews.slice(
-            indexOfFirstInterview,
-            indexOfLastInterview
-        );
-
-    const totalPages = Math.ceil(
-        filteredInterviews.length / interviewsPerPage
-    );
 
     // Calculate Interview Streak
     const sortedInterviews = [...interviews].sort(
@@ -918,6 +963,47 @@ let filtered=[...interviews];
     console.log("worstRole:", weakestRole);
     console.log("rolePerformance:", rolePerformance);
     console.log("topPerformers:", topPerformers);
+
+    if (loading) {
+
+        return (
+
+            <div className="container mt-4">
+
+                <div className="row g-4">
+
+                    {[1, 2, 3, 4].map((item) => (
+
+                        <div
+                            className="col-md-3 mb-3"
+                            key={item}
+                        >
+
+                            <div className="card shadow p-4">
+
+                                <div className="placeholder-glow">
+
+                                    <span className="placeholder col-8"></span>
+
+                                    <span className="placeholder col-6"></span>
+
+                                    <span className="placeholder col-4"></span>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    ))}
+
+                </div>
+
+            </div>
+
+        );
+
+    }
     return (
         <div>
             <Navbar />
@@ -932,41 +1018,42 @@ let filtered=[...interviews];
             )}
 
             <div
-                className="container mt-4"
+                className="container mt-4 py-4"
                 ref={dashboardRef}
             >
                 <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
-                    <div className="mb-3 mb-md-0">
+                    <div className="mb-5">
 
-                        <h1 className="fw-bold mb-1">
-                            Dashboard
+                        <h1 className="fw-bold display-5">
+                            👋 Welcome, {stats?.userName || "User"}!
                         </h1>
 
-                        <p className="text-muted mb-0">
-                            Manage your interviews
+                        <p className="text-muted fs-5 mb-0">
+                            Track your interview preparation, monitor your performance, and improve every day.
                         </p>
-                    </div>
 
-                    <div className="d-flex flex-wrap gap-2">
+                    </div>
+                    <div className="d-flex flex-wrap gap-3 mb-5">
 
                         <button
-                            className="btn btn-success"
+                            className="btn btn-success rounded-pill px-4"
                             onClick={() => navigate("/create")}
                         >
                             ➕ Create Interview
                         </button>
 
                         <button
-                            className="btn btn-primary"
+                            className="btn btn-primary rounded-pill px-4"
                             onClick={fetchInterviews}
                         >
                             🔄 Refresh
                         </button>
+
                         <button
-                            className="btn btn-success"
+                            className="btn btn-outline-success rounded-pill px-4"
                             onClick={exportToCSV}
                         >
-                            📄 Export Excel
+                            📄 Export CSV
                         </button>
 
                     </div>
@@ -977,38 +1064,34 @@ let filtered=[...interviews];
                     <div className="row g-3 mb-4 justify-content-center">
                         <div className="d-flex justify-content-between align-items-center mb-4">
 
-                            <div>
 
-                                <h2 className="fw-bold">
-                                    Welcome Back 👋
-                                </h2>
-
-                                <p className="text-muted mb-0">
-                                    Here's your interview performance overview.
-                                </p>
-
-                            </div>
 
                         </div>
-                        <div className="col-lg-3 col-md-6 mb-3">
+                        <div className="col-lg-3 col-md-6 mb-4">
 
-                            <div className="card shadow-lg border-0 rounded-4 text-center h-100">
+                            <div className="card shadow border-0 rounded-4 h-100 dashboard-card">
 
-                                <div className="card-body">
+                                <div className="card-body text-center d-flex flex-column justify-content-center p-4">
 
-                                    <div className="mb-2">
+                                    <div className="mb-3">
 
-                                        <span style={{ fontSize: "2rem" }}>
+                                        <span style={{ fontSize: "3rem" }}>
                                             📊
                                         </span>
 
                                     </div>
 
-                                    <h6 className="fw-bold">
+                                    <h6 className="text-muted fw-semibold">
                                         Total Interviews
                                     </h6>
 
-                                    <h2>{stats.totalInterviews}</h2>
+                                    <h1 className="fw-bold display-5 my-2">
+                                        {stats.totalInterviews}
+                                    </h1>
+
+                                    <small className="text-muted">
+                                        Total Mock Interviews
+                                    </small>
 
                                 </div>
 
@@ -1016,21 +1099,36 @@ let filtered=[...interviews];
 
                         </div>
 
-                        <div className="col-lg-3 col-md-6 mb-3">
+                        <div className="col-lg-3 col-md-6 mb-4">
 
-                            <div className="card text-center border-info">
+                            <div className="card shadow border-0 rounded-4 h-100 dashboard-card">
 
-                                <div className="card-body">
+                                <div className="card-body text-center d-flex flex-column justify-content-center p-4">
 
-                                    <h6>🎯 Most Practiced Role</h6>
+                                    <div className="mb-3">
 
-                                    <h5 className="text-info fw-bold">
-                                        {mostPracticedRole.role}
-                                    </h5>
+                                        <span style={{ fontSize: "3rem" }}>
+                                            🎯
+                                        </span>
 
-                                    <p className="mb-0">
-                                        {mostPracticedRole.count} Interviews
-                                    </p>
+                                    </div>
+
+                                    <h6 className="text-muted fw-semibold">
+                                        Most Practiced Role
+                                    </h6>
+
+                                    <h4 className="fw-bold text-info my-2">
+
+                                        {mostPracticedRole.role || "N/A"}
+
+                                    </h4>
+
+                                    <small className="text-muted">
+
+                                        {mostPracticedRole.count || 0} Interview
+                                        {(mostPracticedRole.count || 0) !== 1 ? "s" : ""}
+
+                                    </small>
 
                                 </div>
 
@@ -1040,27 +1138,35 @@ let filtered=[...interviews];
 
 
 
-                        <div className="col-lg-3 col-md-6 mb-3">
+                        <div className="col-lg-3 col-md-6 mb-4">
 
-                            <div className="card shadow-lg border-0 rounded-4 text-center h-100">
+                            <div className="card shadow border-0 rounded-4 h-100 dashboard-card">
 
-                                <div className="card-body">
+                                <div className="card-body text-center d-flex flex-column justify-content-center p-4">
 
-                                    <div className="mb-2">
+                                    <div className="mb-3">
 
-                                        <span style={{ fontSize: "2rem" }}>
+                                        <span style={{ fontSize: "3rem" }}>
                                             ✅
                                         </span>
 
                                     </div>
 
-                                    <h6 className="fw-bold">
+                                    <h6 className="text-muted fw-semibold">
                                         Completed
                                     </h6>
 
-                                    <h2 className="text-success">
+                                    <h1 className="fw-bold display-5 my-2">
+
                                         {stats.completedInterviews}
-                                    </h2>
+
+                                    </h1>
+
+                                    <small className="text-muted">
+
+                                        Successfully Completed
+
+                                    </small>
 
                                 </div>
 
@@ -1068,27 +1174,35 @@ let filtered=[...interviews];
 
                         </div>
 
-                        <div className="col-lg-3 col-md-6 mb-3">
+                        <div className="col-lg-3 col-md-6 mb-4">
 
-                            <div className="card shadow-lg border-0 rounded-4 text-center h-100">
+                            <div className="card shadow border-0 rounded-4 h-100 dashboard-card">
 
-                                <div className="card-body">
+                                <div className="card-body text-center d-flex flex-column justify-content-center p-4">
 
-                                    <div className="mb-2">
+                                    <div className="mb-3">
 
-                                        <span style={{ fontSize: "2rem" }}>
+                                        <span style={{ fontSize: "3rem" }}>
                                             ⏳
                                         </span>
 
                                     </div>
 
-                                    <h6 className="fw-bold">
+                                    <h6 className="text-muted fw-semibold">
                                         Pending
                                     </h6>
 
-                                    <h2 className="text-warning">
+                                    <h1 className="fw-bold display-5 my-2">
+
                                         {stats.pendingInterviews}
-                                    </h2>
+
+                                    </h1>
+
+                                    <small className="text-muted">
+
+                                        Still in Progress
+
+                                    </small>
 
                                 </div>
 
@@ -1096,120 +1210,201 @@ let filtered=[...interviews];
 
                         </div>
 
-                        <div className="col-lg-3 col-md-6 mb-3">
+                        <div className="col-lg-3 col-md-6 mb-4">
 
-                            <div className="card shadow-lg border-0 rounded-4 text-center h-100">
+                            <div className="card shadow border-0 rounded-4 h-100 dashboard-card">
 
-                                <div className="card-body">
+                                <div className="card-body text-center d-flex flex-column justify-content-center p-4">
 
-                                    <div className="mb-2">
+                                    <div className="mb-3">
 
-                                        <span style={{ fontSize: "2rem" }}>
+                                        <span style={{ fontSize: "3rem" }}>
                                             ⭐
                                         </span>
 
                                     </div>
 
-                                    <h6 className="fw-bold">
+                                    <h6 className="text-muted fw-semibold">
                                         Average Score
                                     </h6>
 
-                                    <h2 className="text-primary">
+                                    <h1 className="fw-bold display-5 text-primary my-2">
 
                                         {stats.averageScore
                                             ? stats.averageScore.toFixed(1)
                                             : "0.0"}
 
-                                        /10
+                                        <small className="fs-5">/10</small>
 
-                                    </h2>
+                                    </h1>
 
-                                    <span className={`badge bg-${performanceColor} fs-6 mt-2`}>
+                                    <span
+                                        className={`badge bg-${performanceColor} fs-6 px-3 py-2 mx-auto`}
+                                    >
                                         {performanceBadge}
                                     </span>
+
+                                    <small className="text-muted mt-3">
+                                        Overall Performance
+                                    </small>
 
                                 </div>
 
                             </div>
+
                         </div>
 
-                        <div className="col-lg-3 col-md-6 mb-3">
+                        <div className="col-lg-3 col-md-6 mb-4">
 
-                            <div className="card shadow-lg border-0 rounded-4 text-center h-100">
+                            <div className="card shadow border-0 rounded-4 h-100 dashboard-card">
 
-                                <div className="card-body">
+                                <div className="card-body text-center d-flex flex-column justify-content-center p-4">
 
-                                    <div className="mb-2">
+                                    <div className="mb-3">
 
-                                        <span style={{ fontSize: "2rem" }}>
+                                        <span style={{ fontSize: "3rem" }}>
                                             🏆
                                         </span>
 
                                     </div>
 
-                                    <h6 className="fw-bold">
+                                    <h6 className="text-muted fw-semibold">
                                         Best Score
                                     </h6>
 
-                                    <h2 className="text-success">
+                                    <h1 className="fw-bold display-5 text-success my-2">
 
                                         {stats.bestScore
                                             ? stats.bestScore.toFixed(1)
                                             : "0.0"}
 
-                                        /10
+                                        <small className="fs-5">/10</small>
 
-                                    </h2>
+                                    </h1>
+
+                                    <small className="text-muted">
+                                        Highest Score Achieved
+                                    </small>
 
                                 </div>
 
                             </div>
 
                         </div>
+                        <div className="col-lg-3 col-md-6 mb-4">
 
-                        <div className="col-lg-3 col-md-6 mb-3">
+                            <div className="card shadow border-0 rounded-4 h-100 dashboard-card">
 
-                            <div className="card shadow-lg border-0 rounded-4 text-center h-100">
+                                <div className="card-body text-center d-flex flex-column justify-content-center p-4">
 
-                                <div className="card-body">
+                                    <div className="mb-3">
 
-                                    <div className="mb-2">
+                                        <span style={{ fontSize: "3rem" }}>
+                                            ❤️
+                                        </span>
 
-                                        <span style={{ fontSize: "2rem" }}>
+                                    </div>
+
+                                    <h6 className="text-muted fw-semibold">
+                                        Favorites
+                                    </h6>
+
+                                    <h1 className="fw-bold display-5 text-danger my-2">
+
+                                        {stats?.totalFavorites || 0}
+
+                                    </h1>
+
+                                    <small className="text-muted">
+
+                                        Saved Interviews
+
+                                    </small>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+                        <div className="col-lg-3 col-md-6 mb-4">
+
+                            <div className="card shadow border-0 rounded-4 h-100 dashboard-card">
+
+                                <div className="card-body text-center d-flex flex-column justify-content-center p-4">
+
+                                    <div className="mb-3">
+
+                                        <span style={{ fontSize: "3rem" }}>
+                                            📈
+                                        </span>
+
+                                    </div>
+
+                                    <h6 className="text-muted fw-semibold">
+                                        Completion Rate
+                                    </h6>
+
+                                    <h1 className="fw-bold display-5 text-success my-2">
+
+                                        {(stats?.completionRate || 0).toFixed(1)}
+
+                                        <small className="fs-5">%</small>
+
+                                    </h1>
+
+                                    <small className="text-muted">
+
+                                        Overall Progress
+
+                                    </small>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+                        <div className="col-lg-3 col-md-6 mb-4">
+
+                            <div className="card shadow border-0 rounded-4 h-100 dashboard-card">
+
+                                <div className="card-body text-center d-flex flex-column justify-content-center p-4">
+
+                                    <div className="mb-3">
+
+                                        <span style={{ fontSize: "3rem" }}>
                                             🔥
                                         </span>
 
                                     </div>
 
-                                    <h6 className="fw-bold">
+                                    <h6 className="text-muted fw-semibold">
                                         Interview Streak
                                     </h6>
 
-                                    <h2 className="text-danger">
+                                    <h1 className="fw-bold display-5 text-danger my-2">
+
                                         {streak}
-                                    </h2>
+
+                                    </h1>
 
                                     <small className="text-muted">
+
                                         Consecutive Days
+
                                     </small>
 
-                                    <p
-                                        className="mt-2 mb-0"
-                                        style={{
-                                            fontSize: "0.85rem",
-                                            color: "#0d6efd",
-                                            fontWeight: "600",
-                                        }}
+                                    <span
+                                        className="badge bg-primary mt-3 mx-auto px-3 py-2"
                                     >
                                         {streakMessage}
-                                    </p>
-
+                                    </span>
 
                                 </div>
 
                             </div>
 
                         </div>
+
                         <div className="d-flex justify-content-end mb-3">
 
                             <select
@@ -1233,14 +1428,14 @@ let filtered=[...interviews];
 
                         <div
                             ref={performanceDistributionRef}
-                            className="card shadow-lg border-0 rounded-4 mt-4 p-4">
+                            className="card shadow border-0 rounded-4 p-4 chart-card">
 
                             <div className="d-flex justify-content-between align-items-center mb-4">
-
-                                <h4 className="mb-0">
-                                    📊 Performance Distribution
-                                </h4>
-
+                                <div className="mt-5">
+                                    <h4 className="mb-4">
+                                        📊 Performance Distribution
+                                    </h4>
+                                </div>
                                 <button
                                     className="btn btn-outline-primary btn-sm"
                                     onClick={downloadPerformanceDistribution}
@@ -1291,11 +1486,11 @@ let filtered=[...interviews];
                         <div
                             ref={scoreTrendRef}
                             className="card shadow-lg border-0 rounded-4 mt-4 p-4">
-
-                            <h4 className="mb-4">
-                                📈 Score Trend
-                            </h4>
-
+                            <div className="mt-5">
+                                <h4 className="mb-4">
+                                    📈 Score Trend
+                                </h4>
+                            </div>
                             <button
                                 className="btn btn-outline-primary btn-sm"
                                 onClick={downloadScoreTrend}
@@ -1320,10 +1515,11 @@ let filtered=[...interviews];
                         <div
                             ref={rolewisePerformanceRef}
                             className="card shadow-lg border-0 rounded-4 mt-4 p-4">
-
-                            <h4 className="mb-4">
-                                📊 Role-wise Performance
-                            </h4>
+                            <div className="mt-5">
+                                <h4 className="mb-4">
+                                    📊 Role-wise Performance
+                                </h4>
+                            </div>
                             <button
                                 className="btn btn-outline-primary btn-sm"
                                 onClick={downloadrolewisePerformance}
@@ -1359,10 +1555,11 @@ let filtered=[...interviews];
                             >
                                 📷 Download
                             </button>
-                            <h4 className="mb-4">
-                                📅 Monthly Interview Statistics
-                            </h4>
-
+                            <div className="mt-5">
+                                <h4 className="mb-4">
+                                    📅 Monthly Interview Statistics
+                                </h4>
+                            </div>
 
                             <Line
                                 data={monthlyChartData}
@@ -1385,11 +1582,11 @@ let filtered=[...interviews];
                         <div
                             ref={weeklyActivityRef}
                             className="card shadow-lg border-0 rounded-4 mt-4 p-4">
-
-                            <h4 className="mb-4">
-                                📅 Weekly Activity
-                            </h4>
-
+                            <div className="mt-5">
+                                <h4 className="mb-4">
+                                    📅 Weekly Activity
+                                </h4>
+                            </div>
                             <button
                                 className="btn btn-outline-primary btn-sm"
                                 onClick={downloadweeklyActivity}
@@ -1464,11 +1661,11 @@ let filtered=[...interviews];
 
                         </div>
                         <div className="card shadow-lg border-0 rounded-4 mt-4 p-4">
-
-                            <h4 className="mb-4">
-                                🏅 Top Performing Roles
-                            </h4>
-
+                            <div className="mt-5">
+                                <h4 className="mb-4">
+                                    🏅 Top Performing Roles
+                                </h4>
+                            </div>
                             <table className="table table-hover">
 
                                 <thead>
@@ -1507,11 +1704,11 @@ let filtered=[...interviews];
 
                         </div>
                         <div className="card shadow-lg border-0 rounded-4 mt-4 p-4">
-
-                            <h4 className="mb-4">
-                                📋 Interview Performance History
-                            </h4>
-
+                            <div className="mt-5">
+                                <h4 className="mb-4">
+                                    📋 Interview Performance History
+                                </h4>
+                            </div>
                             <div className="table-responsive">
 
                                 <table className="table table-hover align-middle">
@@ -1635,12 +1832,12 @@ let filtered=[...interviews];
 
                         </div>
                         <div className="card shadow-lg border-0 rounded-4 mt-4 p-4">
-
-                            <h4 className="mb-4">
-                                📌 Performance Insights
-                            </h4>
-
-                            <div className="row">
+                            <div className="mt-5">
+                                <h4 className="mb-4">
+                                    📌 Performance Insights
+                                </h4>
+                            </div>
+                            <div className="row g-4">
 
                                 <div className="col-md-4">
 
@@ -1684,7 +1881,9 @@ let filtered=[...interviews];
 
                                         <div className="card-body">
 
-                                            <h6>📊 Total Interviews</h6>
+                                            <p className="text-muted mb-0">
+                                                📊 Total mock interviews
+                                            </p>
 
                                             <h3 className="text-primary">
                                                 {filteredDashboardInterviews.length}
@@ -1708,11 +1907,11 @@ let filtered=[...interviews];
                     <div className="card shadow-lg border-0 rounded-4 mb-4">
 
                         <div className="card-body">
-
-                            <h5 className="mb-3">
-                                📈 Interview Progress
-                            </h5>
-
+                            <div className="mt-5">
+                                <h5 className="mb-4">
+                                    📈 Interview Progress
+                                </h5>
+                            </div>
                             <div className="progress" style={{ height: "25px" }}>
 
                                 <div
@@ -1754,11 +1953,11 @@ let filtered=[...interviews];
                     <div className="card shadow-lg border-0 rounded-4 mb-4">
 
                         <div className="card-body text-center">
-
-                            <h5 className="mb-3">
-                                🎯 Performance
-                            </h5>
-
+                            <div className="mt-5">
+                                <h5 className="mb-4">
+                                    🎯 Performance
+                                </h5>
+                            </div>
                             {
 
                                 stats.averageScore >= 8 ?
@@ -1809,11 +2008,11 @@ let filtered=[...interviews];
                 <div className="card shadow-lg border-0 rounded-4 mb-4">
 
                     <div className="card-body">
-
-                        <h5 className="mb-3">
-                            🕒 Recent Activity
-                        </h5>
-
+                        <div className="mt-5">
+                            <h5 className="mb-4">
+                                🕒 Recent Activity
+                            </h5>
+                        </div>
                         {
 
                             interviews.length === 0 ?
@@ -1879,25 +2078,33 @@ let filtered=[...interviews];
 
                 <div className="row g-3 mb-5">
 
-                    <div className="col-lg-5 col-md-6">
+                    <div className="col-lg-5 col-md-6 mb-3">
 
-                        <input
-                            type="text"
-                            className="form-control"
-                            placeholder="🔍 Search by Job Role..."
-                            value={searchTerm}
-                            onChange={(e) => {
-                                setSearchTerm(e.target.value);
-                                setCurrentPage(1);
-                            }}
-                        />
+                        <div className="input-group shadow-sm">
+
+                            <span className="input-group-text bg-white border-end-0">
+                                🔍
+                            </span>
+
+                            <input
+                                type="text"
+                                className="form-control border-start-0 rounded-end-pill"
+                                placeholder="Search interview by job role..."
+                                value={searchTerm}
+                                onChange={(e) => {
+                                    setSearchTerm(e.target.value);
+                                    setCurrentPage(1);
+                                }}
+                            />
+
+                        </div>
 
                     </div>
 
-                    <div className="col-lg-2 col-md-3">
+                    <div className="col-lg-2 col-md-3 mb-3">
 
                         <select
-                            className="form-select"
+                            className="form-select form-select-lg rounded-pill shadow-sm"
                             value={statusFilter}
                             onChange={(e) => {
                                 setStatusFilter(e.target.value);
@@ -1905,58 +2112,75 @@ let filtered=[...interviews];
                             }}
                         >
 
-                            <option value="All">All Interviews</option>
+                            <option value="All">📋 All Interviews</option>
 
-                            <option value="Completed">Completed</option>
+                            <option value="Completed">✅ Completed</option>
 
-                            <option value="Pending">Pending</option>
+                            <option value="Pending">⏳ Pending</option>
 
                         </select>
 
                     </div>
-                    <div className="col-lg-2 col-md-3">
+                    <div className="col-lg-3 col-md-4 mb-3">
 
-                    <select
-    className="form-select"
-    value={sortOrder}
-    onChange={(e) => {
-        setSortOrder(e.target.value);
-        setCurrentPage(1);
-    }}
->
-    <option value="Newest">🆕 Newest First</option>
-    <option value="Oldest">📅 Oldest First</option>
-    <option value="Highest Score">⭐ Highest Score</option>
-    <option value="Lowest Score">📉 Lowest Score</option>
-    <option value="A-Z">🔤 A-Z</option>
-    <option value="Z-A">🔠 Z-A</option>
-</select>
+                        <select
+                            className="form-select form-select-lg rounded-pill shadow-sm"
+                            value={sortOrder}
+                            onChange={(e) => {
+                                setSortOrder(e.target.value);
+                                setCurrentPage(1);
+                            }}
+                        >
+
+                            <option value="Newest">🆕 Newest First</option>
+
+                            <option value="Oldest">📅 Oldest First</option>
+
+                            <option value="Highest Score">⭐ Highest Score</option>
+
+                            <option value="Lowest Score">📉 Lowest Score</option>
+
+                            <option value="A-Z">🔤 A-Z</option>
+
+                            <option value="Z-A">🔠 Z-A</option>
+
+                        </select>
 
                     </div>
-                    <div className="col-lg-2 col-md-3 d-grid">
+                    <div className="col-lg-2 col-md-3 mb-3 d-grid">
 
                         <button
-                            className="btn btn-secondary"
+                            className="btn btn-outline-secondary btn-lg rounded-pill shadow-sm"
                             onClick={() => {
                                 setSearchTerm("");
                                 setStatusFilter("All");
                                 setSortOrder("Newest");
+                                setDateFilter("ALL");
+                                setShowFavoritesOnly(false);
                                 setCurrentPage(1);
                             }}
                         >
-                            Reset
+                            🔄 Reset Filters
                         </button>
-                        
 
                     </div>
-                     <div className="col-lg-2 col-md-3 d-grid">
+                <div className="col-lg-3 col-md-4 mb-3 d-grid">
 
-                    <button
-    className={`btn ${showFavoritesOnly ? "btn-warning" : "btn-outline-warning"} ms-2`}
-    onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
->
-    {showFavoritesOnly ? "⭐ Showing Favorites" : "☆ Show Favorites"}
-</button>
+    <button
+        className={`btn btn-lg rounded-pill shadow-sm ${
+            showFavoritesOnly
+                ? "btn-warning"
+                : "btn-outline-warning"
+        }`}
+        onClick={() => {
+            setShowFavoritesOnly(!showFavoritesOnly);
+            setCurrentPage(1);
+        }}
+    >
+        {showFavoritesOnly
+            ? "⭐ Showing Favorites"
+            : "☆ Show Favorites"}
+    </button>
 
 </div>
                 </div>
@@ -1969,132 +2193,153 @@ let filtered=[...interviews];
 
                 </p>
 
-                {
-                    filteredInterviews.length === 0 ?
+                {filteredInterviews.length === 0 ? (
 
-                        (
+                    <div className="text-center py-5">
 
-                            <div className="alert alert-warning text-center">
+                        <h1>
+                            {interviews.length === 0
+                                ? "📝"
+                                : showFavoritesOnly
+                                    ? "⭐"
+                                    : "🔍"}
+                        </h1>
 
-                                <h4>🔍 No Interviews Found</h4>
+                        <h4>
+                            {interviews.length === 0
+                                ? "No Interviews Yet"
+                                : showFavoritesOnly
+                                    ? "No Favorite Interviews"
+                                    : "No Interviews Found"}
+                        </h4>
 
-                                <p>
-                                    Try changing your search or filter.
+                        <p className="text-muted">
+
+                            {interviews.length === 0
+                                ? "Create your first interview to get started."
+                                : showFavoritesOnly
+                                    ? "Mark interviews as favorites to see them here."
+                                    : "Try changing your search or filters."}
+
+                        </p>
+
+                        {interviews.length === 0 && (
+
+                            <button
+                                className="btn btn-primary"
+                                onClick={() => navigate("/create")}
+                            >
+                                ➕ Create Interview
+                            </button>
+
+                        )}
+
+                    </div>
+
+                ) : (
+
+                    currentInterviews.map((interview) => (
+
+                        <div
+                            key={interview.id}
+                            className="card shadow border-0 rounded-4 mb-4 interview-card h-100"
+                        >
+
+                            <div className="card-body d-flex flex-column p-4">
+
+                                {/* Keep ALL your existing code here exactly as it is */}
+
+                                <h4 className="fw-bold text-primary">
+                                    {interview.jobRole}
+                                </h4>
+
+                                <p className="mb-2 text-muted">
+                                    💼 <strong>Experience:</strong> {interview.experienceLevel}
                                 </p>
 
+                                <p className="mb-3">
+                                    <strong>Status:</strong>{" "}
+
+                                    {interview.completed ? (
+                                        <span className="badge bg-success rounded-pill px-3 py-2">
+                                            ✅ Completed
+                                        </span>
+                                    ) : (
+                                        <span className="badge bg-warning text-dark rounded-pill px-3 py-2">
+                                            ⏳ Pending
+                                        </span>
+                                    )}
+                                </p>
+
+                                <p className="text-muted mb-4">
+                                    📅 <strong>Created:</strong>{" "}
+                                    {new Date(interview.createdAt).toLocaleString()}
+                                </p>
+                                <div className="mt-auto">
+                                    <button
+                                        className={`btn btn-sm me-2 ${interview.favorite
+                                            ? "btn-warning"
+                                            : "btn-outline-warning"
+                                            }`}
+                                        onClick={() => handleToggleFavorite(interview.id)}
+                                    >
+                                        {interview.favorite
+                                            ? "⭐ Favorited"
+                                            : "☆ Favorite"}
+                                    </button>
+
+                                    <button
+                                        className="btn btn-primary btn-sm me-2"
+                                        onClick={() =>
+                                            navigate(`/interview/${interview.id}`)
+                                        }
+                                    >
+                                        👁 View
+                                    </button>
+
+                                    <button
+                                        className="btn btn-success btn-sm me-2"
+                                        onClick={() =>
+                                            navigate(`/report/${interview.id}`)
+                                        }
+                                    >
+                                        📄 Report
+                                    </button>
+
+                                    <button
+                                        className="btn btn-warning btn-sm me-2"
+                                        onClick={() =>
+                                            navigate(`/edit/${interview.id}`)
+                                        }
+                                    >
+                                        ✏ Edit
+                                    </button>
+
+                                    <button
+                                        className="btn btn-danger"
+                                        onClick={() => handleDelete(interview.id)}
+                                        disabled={deletingId === interview.id}
+                                    >
+                                        {deletingId === interview.id ? (
+                                            <>
+                                                <span
+                                                    className="spinner-border spinner-border-sm me-2"
+                                                    role="status"
+                                                ></span>
+                                                Deleting...
+                                            </>
+                                        ) : (
+                                            "🗑 Delete"
+                                        )}
+                                    </button>
+                                </div>
                             </div>
 
-                        )
+                        </div>
 
-                        :
+                    ))
 
-                        (
-
-                            currentInterviews
-
-                                .map((interview) => (
-
-                                    <div
-                                        key={interview.id}
-                                        className="card shadow border-0 rounded-4 mb-4 interview-card"
-                                    >
-
-                                        <div className="card-body p-4">
-
-                                            <h4 className="fw-bold text-primary">
-                                                {interview.jobRole}
-                                            </h4>
-
-                                            <p className="mb-2 text-muted">
-
-                                                💼 <strong>Experience:</strong> {interview.experienceLevel}
-
-                                            </p>
-                                            <p className="mb-3">
-
-                                                <strong>Status:</strong>{" "}
-
-                                                {interview.completed ? (
-
-                                                    <span className="badge bg-success rounded-pill px-3 py-2">
-
-                                                        ✅ Completed
-
-                                                    </span>
-
-                                                ) : (
-
-                                                    <span className="badge bg-warning text-dark rounded-pill px-3 py-2">
-
-                                                        ⏳ Pending
-
-                                                    </span>
-
-                                                )}
-
-                                            </p>
-                                            <p className="text-muted">
-                                                📅 <strong>Created:</strong> {" "}
-                                                {new Date(interview.createdAt).toLocaleString()}
-                                            </p>
-                                            <button
-    className={`btn btn-sm me-2 ${
-        interview.favorite ? "btn-warning" : "btn-outline-warning"
-    }`}
-    onClick={() => handleToggleFavorite(interview.id)}
->
-    {interview.favorite ? "⭐ Favorited" : "☆ Favorite"}
-</button>
-
-                                            <button
-                                                className="btn btn-primary btn-sm me-2"
-                                                onClick={() => navigate(`/interview/${interview.id}`)}
-                                            >
-                                                👁 View
-                                            </button>
-
-                                            <button
-                                                className="btn btn-success btn-sm me-2"
-                                                onClick={() => navigate(`/report/${interview.id}`)}
-                                            >
-                                                📄 Report
-                                            </button>
-
-                                            <button
-                                                className="btn btn-warning btn-sm me-2"
-                                                onClick={() => navigate(`/edit/${interview.id}`)}
-                                            >
-                                                ✏ Edit
-                                            </button>
-
-                                            <button
-                                                className="btn btn-danger"
-                                                onClick={() => handleDelete(interview.id)}
-                                                disabled={deletingId === interview.id}
-                                            >
-                                                {deletingId === interview.id ? (
-                                                    <>
-                                                        <span
-                                                            className="spinner-border spinner-border-sm me-2"
-                                                            role="status"
-                                                        ></span>
-                                                        Deleting...
-                                                    </>
-                                                ) : (
-                                                    "🗑 Delete"
-                                                )}
-                                            </button>
-
-
-                                        </div>
-
-
-                                    </div>
-
-                                ))
-
-                        )
-                }
+                )}
 
                 {totalPages > 1 && (
 

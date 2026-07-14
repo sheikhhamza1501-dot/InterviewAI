@@ -271,6 +271,7 @@ public class InterviewService {
         List<Interview> interviews = interviewRepository.findByUser(user);
 
         DashboardStatsResponse response = new DashboardStatsResponse();
+        response.setUserName(user.getFullName());
 
         response.setTotalInterviews(interviews.size());
 
@@ -291,6 +292,43 @@ public class InterviewService {
         int pending = interviews.size() - completed;
 
         response.setPendingInterviews(pending);
+
+        long totalFavorites = interviews.stream()
+                .filter(i -> Boolean.TRUE.equals(i.getFavorite()))
+                .count();
+
+        response.setTotalFavorites(totalFavorites);
+
+        double completionRate = 0;
+
+        if (!interviews.isEmpty()) {
+
+            completionRate = (completed * 100.0) / interviews.size();
+
+        }
+
+        response.setCompletionRate(completionRate);
+
+        double completedPercentage = 0;
+
+        if (!interviews.isEmpty()) {
+
+            completedPercentage = (completed * 100.0) / interviews.size();
+
+        }
+
+        response.setCompletedPercentage(completedPercentage);
+
+
+        double pendingPercentage = 0;
+
+        if (!interviews.isEmpty()) {
+
+            pendingPercentage = (pending * 100.0) / interviews.size();
+
+        }
+
+        response.setPendingPercentage(pendingPercentage);
 
         double totalScore = 0;
 
