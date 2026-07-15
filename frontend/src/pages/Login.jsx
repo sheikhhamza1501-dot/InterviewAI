@@ -36,7 +36,18 @@ console.log(error);
         <div className="container mt-5" style={{ maxWidth: "400px" }}>
 
             <h2 className="mb-4">Login</h2>
+<p className="text-center mt-3">
 
+    Don't have an account?
+
+    <button
+        className="btn btn-link"
+        onClick={() => navigate("/register")}
+    >
+        Register
+    </button>
+
+</p>
             <input
                 className="form-control mb-3"
                 type="email"
