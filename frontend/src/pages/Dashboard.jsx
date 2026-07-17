@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import api from "../services/api";
 import Navbar from "../component/Navbar";
 import { useNavigate } from "react-router-dom";
-import { getDashboardStats } from "../services/interviewService";
+import { getDashboardStats } from "../services/InterviewService";
 import axios from "axios";
 import {
     deleteInterview,
@@ -94,7 +94,7 @@ function Dashboard() {
 
         try {
 
-            const response = await api.get("/interviews");
+            const response = await api.get("/api/interviews");
 
             console.log(response.data);
 

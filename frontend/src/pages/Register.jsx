@@ -2,6 +2,7 @@ import { useState } from "react";
 import { register } from "../services/authService";
 import { useNavigate } from "react-router-dom";
 
+
 function Register() {
 
     const [fullName, setFullName] = useState("");
