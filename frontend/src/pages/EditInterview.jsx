@@ -20,7 +20,7 @@ function EditInterview() {
 
         try {
 
-            const response = await api.get(`/interviews/${id}`);
+            const response = await api.get(`/api/interviews/${id}`);
 
             setJobRole(response.data.jobRole);
 
@@ -40,7 +40,7 @@ function EditInterview() {
 
         try {
 
-            await api.put(`/interviews/${id}`, {
+            await api.put(`/api/interviews/${id}`, {
 
                 jobRole,
 
