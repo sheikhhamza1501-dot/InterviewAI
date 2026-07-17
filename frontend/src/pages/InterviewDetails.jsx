@@ -23,7 +23,7 @@ function InterviewDetails() {
 
         try {
 
-            const response = await api.get(`/interviews/${id}`);
+            const response = await api.get(`/api/interviews/${id}`);
 
             setInterview(response.data);
 
@@ -41,7 +41,7 @@ function InterviewDetails() {
 
     try {
 
-        const response = await api.get(`/questions/interview/${id}`);
+        const response = await api.get(`/api/questions/interview/${id}`);
 
         setQuestions(response.data);
 
@@ -66,7 +66,7 @@ const saveAnswer = async (questionId) => {
 
     try {
 
-        await api.put(`/questions/${questionId}/answer`, {
+        await api.put(`/api/questions/${questionId}/answer`, {
             answer: answers[questionId],
         });
 
@@ -87,7 +87,7 @@ const evaluateAnswer = async (questionId) => {
     try {
 
         const response = await api.post(
-            `/questions/${questionId}/evaluate`
+            `/api/questions/${questionId}/evaluate`
         );
 
         setEvaluations((prev) => ({
@@ -147,7 +147,7 @@ const handleGenerateQuestions = async () => {
 
     try {
 
-        await api.get("/ai/generate", {
+        await api.get("/api/ai/generate", {
             params: {
                 interviewId: interview.id,
                 jobRole: interview.jobRole,

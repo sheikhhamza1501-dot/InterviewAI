@@ -1,6 +1,6 @@
 import { useState } from "react";
 import Navbar from "../component/Navbar";
-import { createInterview } from "../services/interviewService";
+import { createInterview } from "../services/InterviewService";
 import { useNavigate } from "react-router-dom";
 
 

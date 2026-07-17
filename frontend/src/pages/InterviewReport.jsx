@@ -412,7 +412,7 @@ function InterviewReport() {
 
         try {
 
-            const response = await api.get(`/interviews/${id}/report`);
+            const response = await api.get(`/api/interviews/${id}/report`);
 
             setReport(response.data);
 
