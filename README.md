@@ -14,19 +14,6 @@ https://interviewai-backend-bof4.onrender.com
 
 ---
 
-## 📸 Screenshots
-
-> Add screenshots of your application here.
-
-- Login Page
-- Registration Page
-- Dashboard
-- Create Interview
-- Interview Report
-- Analytics Dashboard
-
----
-
 # ✨ Features
 
 ### 🔐 Authentication
@@ -289,8 +276,8 @@ https://interviewai-backend-bof4.onrender.com
 
 **Sheikh Hamza Sheikh Nazir**
 
-- GitHub: https://github.com/YOUR_USERNAME
-- LinkedIn: https://linkedin.com/in/YOUR_PROFILE
+- GitHub: https://github.com/sheikhhamza1501-dot
+- LinkedIn: https://linkedin.com/in/sheikh-hamza-sheikh-nazir-b5046b3b6
 
 ---
 
